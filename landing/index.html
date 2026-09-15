@@ -18,7 +18,7 @@
   .wrap{ max-width:1000px; margin:0 auto; padding:0 24px; }
 
   header.hero{ background:var(--plum); color:var(--cream); padding:64px 0 56px; text-align:center; border-bottom:4px solid var(--butter); }
-  header.hero .logo{ max-height:110px; max-width:220px; margin:0 auto 18px; display:block; }
+  header.hero .logo{ width:130px; height:130px; border-radius:50%; object-fit:cover; margin:0 auto 18px; display:block; box-shadow:0 4px 16px rgba(0,0,0,.25); }
   header.hero .tag{ display:inline-block; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--butter); margin-bottom:10px; font-weight:600; }
   header.hero h1{ font-size:clamp(32px, 6vw, 52px); }
   header.hero p{ font-size:16px; color:#E9C9D2; max-width:480px; margin:14px auto 28px; }
@@ -68,6 +68,13 @@
   footer{ background:var(--plum-dark); color:#E9C9D2; padding:32px 0; text-align:center; font-size:13px; }
   footer .foot-brand{ font-family:'Fraunces',serif; color:#fff; font-size:17px; margin-bottom:6px; }
   footer a{ color:var(--butter); text-decoration:none; }
+  footer .foot-social{ display:flex; justify-content:center; gap:16px; margin-top:16px; }
+  footer .foot-social a{
+    width:36px; height:36px; border-radius:50%; border:1px solid rgba(233,201,210,.35);
+    display:flex; align-items:center; justify-content:center;
+  }
+  footer .foot-social a:hover{ border-color:var(--butter); }
+  footer .foot-social svg{ width:17px; height:17px; fill:#E9C9D2; }
 
   .cta-flotante{
     position:fixed; right:18px; bottom:18px; z-index:10;
@@ -94,13 +101,13 @@
   // Ej: Buenos Aires (011) 1234-5678 → '5491112345678'
   const WHATSAPP_NUMBER = '5493795695820';
 
-    const LOGO_URL = 'img/WhatsApp Image 2026-09-13 at 13.51.33.jpeg';
+    const LOGO_URL = 'img/logo.jpg';
 
   const PRODUCTOS = {
     porciones: [
       { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', precio: 7000, foto: 'img/20260911_093108~2.jpg' },
-      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
-      { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg' },
+      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg' },
+      { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
       { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg' },
     ],
   tortas: [
@@ -167,6 +174,18 @@
   <div class="wrap">
     <div class="foot-brand">La Mamu - cakes</div>
     <p>Pedidos por <a id="linkFooterWhatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a></p>
+    <div class="foot-social">
+      <a href="https://instagram.com/lamamu.cakes" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" style="fill:none;" stroke="#E9C9D2" stroke-width="1.8">
+          <rect x="2.5" y="2.5" width="19" height="19" rx="5" style="fill:none;"/>
+          <circle cx="12" cy="12" r="4.3" style="fill:none;"/>
+          <circle cx="17.3" cy="6.7" r="0.9" style="fill:#E9C9D2;" stroke="none"/>
+        </svg>
+      </a>
+      <a href="https://facebook.com/lamamu.cakes" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg>
+      </a>
+    </div>
   </div>
 </footer>
 
