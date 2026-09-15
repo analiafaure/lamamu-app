@@ -55,9 +55,15 @@
   }
   .card .pedir:hover{ border-color:var(--plum); }
 
-  .tile-galeria{ aspect-ratio:1/1; border-radius:var(--radius); overflow:hidden; }
-  .tile-galeria img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s; }
-  .tile-galeria:hover img{ transform:scale(1.06); }
+  .card.sin-stock .foto{ position:relative; }
+  .card.sin-stock .foto img{ filter:grayscale(60%); opacity:.7; }
+  .card.sin-stock .badge-stock{
+    position:absolute; top:10px; right:10px; background:var(--plum-dark); color:#fff;
+    font-size:11px; font-weight:600; letter-spacing:.02em; padding:4px 10px; border-radius:999px;
+  }
+  .card .pedir.deshabilitado{
+    background:var(--line); color:var(--ink-soft); cursor:default; pointer-events:none;
+  }
 
   .pasos{ display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
   .paso{ flex:1; min-width:200px; max-width:260px; text-align:center; }
@@ -107,31 +113,34 @@
 
     const LOGO_URL = 'img/logo.jpg';
 
+  // Un producto con "disponible: false" se muestra igual (con foto, nombre y
+  // precio) pero marcado "Sin stock": la foto sale en gris/apagada, con una
+  // etiqueta encima, y el botón de pedir queda deshabilitado. Si no ponés
+  // "disponible", se asume que sí está disponible (true por defecto).
   const PRODUCTOS = {
     porciones: [
       { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', precio: 7000, foto: 'img/20260911_093108~2.jpg' },
       { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg' },
       { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
       { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg' },
+      // ↓ Fotos que estaban sin usar — les puse nombre/precio provisorio.
+      // Corregí "nombre", "descripcion" y "precio" de cada una (el sabor real
+      // no lo sé), y si ya la tenés disponible para vender, borrá la línea
+      // "disponible: false" (o cambiala a true).
+      { nombre: 'Sabor a confirmar 1', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260828_141023.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 2', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260828_142039~2.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 3', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_092958~2.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 4', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_093618~2.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 5', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_093706.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 6', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_094428~2.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 7', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260910_194536~2.jpg', disponible: false },
+      { nombre: 'Sabor a confirmar 8', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260913_114009~2.jpg', disponible: false },
     ],
   tortas: [
       { nombre: 'Torta chocolate — 20 porciones', descripcion: 'Ideal para cumpleaños y eventos grandes', precio: 50000, foto: 'img/20260904_093008~2.jpg' },
       { nombre: 'Torta red velvet — 12 porciones', descripcion: 'Perfecta para reuniones más chicas', precio: 40000, foto: 'img/20260910_124008~2.jpg' },
     ],
   };
-
-  // Galería: fotos de muestra (no se venden desde acá, son solo para mostrar
-  // variedad — para pedir alguna, el cliente escribe por WhatsApp igual).
-  const GALERIA = [
-    'img/20260828_141023.jpg',
-    'img/20260828_142039~2.jpg',
-    'img/20260904_092958~2.jpg',
-    'img/20260904_093618~2.jpg',
-    'img/20260904_093706.jpg',
-    'img/20260904_094428~2.jpg',
-    'img/20260910_194536~2.jpg',
-    'img/20260913_114009~2.jpg',
-  ];
 </script>
 
 <header class="hero">
@@ -160,14 +169,6 @@
     <h2 class="section-title">Tortas enteras por encargo</h2>
     <p class="section-sub">Para cumpleaños, reuniones y eventos — coordinamos tamaño y fecha de entrega por WhatsApp</p>
     <div class="grid" id="gridTortas"></div>
-  </div>
-</section>
-
-<section id="galeria">
-  <div class="wrap">
-    <h2 class="section-title">Galería</h2>
-    <p class="section-sub">Otros sabores y texturas que preparamos — consultanos disponibilidad, no siempre están en stock</p>
-    <div class="grid" id="gridGaleria"></div>
   </div>
 </section>
 
@@ -235,28 +236,28 @@ function linkWhatsapp(mensaje){
 }
 
 function tarjetaProducto(p){
+  const disponible = p.disponible !== false;
   const foto = p.foto
     ? `<img src="${p.foto}" alt="${p.nombre}">`
     : p.nombre.charAt(0).toUpperCase();
   const mensaje = `Hola! Quiero pedir: ${p.nombre} (${fmt(p.precio)})`;
+  const boton = disponible
+    ? `<a class="pedir" href="${linkWhatsapp(mensaje)}" target="_blank" rel="noopener">Pedir por WhatsApp</a>`
+    : `<span class="pedir deshabilitado">Sin stock</span>`;
   return `
-    <div class="card">
-      <div class="foto">${foto}</div>
+    <div class="card${disponible ? '' : ' sin-stock'}">
+      <div class="foto">${foto}${disponible ? '' : '<span class="badge-stock">Sin stock</span>'}</div>
       <div class="info">
         <h3>${p.nombre}</h3>
         <p>${p.descripcion}</p>
         <div class="precio">${fmt(p.precio)}</div>
-        <a class="pedir" href="${linkWhatsapp(mensaje)}" target="_blank" rel="noopener">Pedir por WhatsApp</a>
+        ${boton}
       </div>
     </div>`;
 }
 
 document.getElementById('gridPorciones').innerHTML = PRODUCTOS.porciones.map(tarjetaProducto).join('');
 document.getElementById('gridTortas').innerHTML = PRODUCTOS.tortas.map(tarjetaProducto).join('');
-
-document.getElementById('gridGaleria').innerHTML = GALERIA.map(src =>
-  `<div class="tile-galeria"><img src="${src}" alt="Porción La Mamu - cakes" loading="lazy"></div>`
-).join('');
 
 const mensajeGenerico = 'Hola! Quería hacer un pedido.';
 document.getElementById('btnHeroWhatsapp').href = linkWhatsapp(mensajeGenerico);
