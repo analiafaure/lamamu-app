@@ -120,25 +120,17 @@
   const PRODUCTOS = {
     porciones: [
       { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', precio: 7000, foto: 'img/20260911_093108~2.jpg' },
-      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg' },
+      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg', disponible: false  },
       { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
       { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg' },
-      // ↓ Fotos que estaban sin usar — les puse nombre/precio provisorio.
-      // Corregí "nombre", "descripcion" y "precio" de cada una (el sabor real
-      // no lo sé), y si ya la tenés disponible para vender, borrá la línea
-      // "disponible: false" (o cambiala a true).
-      { nombre: 'Sabor a confirmar 1', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260828_141023.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 2', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260828_142039~2.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 3', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_092958~2.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 4', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_093618~2.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 5', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_093706.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 6', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260904_094428~2.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 7', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260910_194536~2.jpg', disponible: false },
-      { nombre: 'Sabor a confirmar 8', descripcion: '(completar descripción)', precio: 7000, foto: 'img/20260913_114009~2.jpg', disponible: false },
-    ],
+      { nombre: 'Estilo Balcarce', descripcion: 'Bizcochuelo de vainilla con relleno de dulce de leche + merengue y chantilly + durazno', precio: 7000, foto: 'img/20260904_094428~2.jpg', disponible: false },
+     ],
   tortas: [
-      { nombre: 'Torta chocolate — 20 porciones', descripcion: 'Ideal para cumpleaños y eventos grandes', precio: 50000, foto: 'img/20260904_093008~2.jpg' },
-      { nombre: 'Torta red velvet — 12 porciones', descripcion: 'Perfecta para reuniones más chicas', precio: 40000, foto: 'img/20260910_124008~2.jpg' },
+      { nombre: 'Torta chocolate', descripcion: 'Ideal para cumpleaños y eventos grandes', foto: 'img/20260904_093008~2.jpg' },
+      { nombre: 'Torta red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', foto: 'img/20260910_124008~2.jpg' },
+      { nombre: 'Torta clasica LaMamu', descripcion: 'Bizcochuelo de vainilla con relleno de ganache de cho y chantilly', foto: 'img/20260828_142039~2.jpg' },
+      { nombre: 'Torta estilo balcarce', descripcion: 'Bizcochuelo de vainilla con relleno de dulce de leche + merengue y chantilly + durazno', foto: 'img/20260904_093618~2.jpg' },
+    
     ],
   };
 </script>
@@ -237,12 +229,15 @@ function linkWhatsapp(mensaje){
 
 function tarjetaProducto(p){
   const disponible = p.disponible !== false;
+  const tienePrecio = p.precio != null;
   const foto = p.foto
     ? `<img src="${p.foto}" alt="${p.nombre}">`
     : p.nombre.charAt(0).toUpperCase();
-  const mensaje = `Hola! Quiero pedir: ${p.nombre} (${fmt(p.precio)})`;
+  const mensaje = tienePrecio
+    ? `Hola! Quiero pedir: ${p.nombre} (${fmt(p.precio)})`
+    : `Hola! Quiero consultar precio y disponibilidad de: ${p.nombre}`;
   const boton = disponible
-    ? `<a class="pedir" href="${linkWhatsapp(mensaje)}" target="_blank" rel="noopener">Pedir por WhatsApp</a>`
+    ? `<a class="pedir" href="${linkWhatsapp(mensaje)}" target="_blank" rel="noopener">${tienePrecio ? 'Pedir por WhatsApp' : 'Consultar por WhatsApp'}</a>`
     : `<span class="pedir deshabilitado">Sin stock</span>`;
   return `
     <div class="card${disponible ? '' : ' sin-stock'}">
@@ -250,7 +245,7 @@ function tarjetaProducto(p){
       <div class="info">
         <h3>${p.nombre}</h3>
         <p>${p.descripcion}</p>
-        <div class="precio">${fmt(p.precio)}</div>
+        ${tienePrecio ? `<div class="precio">${fmt(p.precio)}</div>` : ''}
         ${boton}
       </div>
     </div>`;
