@@ -55,6 +55,10 @@
   }
   .card .pedir:hover{ border-color:var(--plum); }
 
+  .tile-galeria{ aspect-ratio:1/1; border-radius:var(--radius); overflow:hidden; }
+  .tile-galeria img{ width:100%; height:100%; object-fit:cover; display:block; transition:transform .35s; }
+  .tile-galeria:hover img{ transform:scale(1.06); }
+
   .pasos{ display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
   .paso{ flex:1; min-width:200px; max-width:260px; text-align:center; }
   .paso .num{
@@ -115,6 +119,19 @@
       { nombre: 'Torta red velvet — 12 porciones', descripcion: 'Perfecta para reuniones más chicas', precio: 40000, foto: 'img/20260910_124008~2.jpg' },
     ],
   };
+
+  // Galería: fotos de muestra (no se venden desde acá, son solo para mostrar
+  // variedad — para pedir alguna, el cliente escribe por WhatsApp igual).
+  const GALERIA = [
+    'img/20260828_141023.jpg',
+    'img/20260828_142039~2.jpg',
+    'img/20260904_092958~2.jpg',
+    'img/20260904_093618~2.jpg',
+    'img/20260904_093706.jpg',
+    'img/20260904_094428~2.jpg',
+    'img/20260910_194536~2.jpg',
+    'img/20260913_114009~2.jpg',
+  ];
 </script>
 
 <header class="hero">
@@ -143,6 +160,14 @@
     <h2 class="section-title">Tortas enteras por encargo</h2>
     <p class="section-sub">Para cumpleaños, reuniones y eventos — coordinamos tamaño y fecha de entrega por WhatsApp</p>
     <div class="grid" id="gridTortas"></div>
+  </div>
+</section>
+
+<section id="galeria">
+  <div class="wrap">
+    <h2 class="section-title">Galería</h2>
+    <p class="section-sub">Otros sabores y texturas que preparamos — consultanos disponibilidad, no siempre están en stock</p>
+    <div class="grid" id="gridGaleria"></div>
   </div>
 </section>
 
@@ -228,6 +253,10 @@ function tarjetaProducto(p){
 
 document.getElementById('gridPorciones').innerHTML = PRODUCTOS.porciones.map(tarjetaProducto).join('');
 document.getElementById('gridTortas').innerHTML = PRODUCTOS.tortas.map(tarjetaProducto).join('');
+
+document.getElementById('gridGaleria').innerHTML = GALERIA.map(src =>
+  `<div class="tile-galeria"><img src="${src}" alt="Porción La Mamu - cakes" loading="lazy"></div>`
+).join('');
 
 const mensajeGenerico = 'Hola! Quería hacer un pedido.';
 document.getElementById('btnHeroWhatsapp').href = linkWhatsapp(mensajeGenerico);
