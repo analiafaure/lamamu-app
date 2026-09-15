@@ -65,6 +65,56 @@
     background:var(--line); color:var(--ink-soft); cursor:default; pointer-events:none;
   }
 
+  .stepper{ display:flex; align-items:center; gap:14px; margin-top:10px; }
+  .stepper-btn{
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--cream);
+    color:var(--plum); font-size:18px; font-weight:700; cursor:pointer; line-height:1;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .stepper-btn:hover{ border-color:var(--plum); }
+  .stepper-cant{ min-width:18px; text-align:center; font-weight:600; font-size:15px; }
+
+  .cta-carrito{ position:fixed; right:18px; bottom:84px; z-index:11; display:none; }
+  .btn-carrito{
+    position:relative; width:52px; height:52px; border-radius:50%; background:var(--plum); color:#fff;
+    border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
+  }
+  .btn-carrito svg{ width:22px; height:22px; }
+  .badge-carrito{
+    position:absolute; top:-4px; right:-4px; background:var(--butter); color:#fff; font-size:11px; font-weight:700;
+    min-width:19px; height:19px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  .overlay-carrito{
+    display:none; position:fixed; inset:0; background:rgba(43,36,32,.55); z-index:20;
+    align-items:flex-end; justify-content:center;
+  }
+  .modal-carrito{
+    background:var(--paper); width:100%; max-width:440px; max-height:88vh; overflow-y:auto;
+    border-radius:16px 16px 0 0; padding:22px 22px 26px;
+  }
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .modal-header h3{ font-size:19px; }
+  .modal-header .cerrar{ background:none; border:none; font-size:20px; color:var(--ink-soft); cursor:pointer; padding:4px; line-height:1; }
+  .item-carrito{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+  .item-carrito .item-nombre{ font-weight:600; }
+  .carrito-total{ display:flex; justify-content:space-between; font-weight:700; font-size:16px; padding:14px 0; border-bottom:1px solid var(--line); margin:4px 0 14px; }
+  .carrito-vacio{ color:var(--ink-soft); font-size:13.5px; padding:16px 0; text-align:center; }
+  .modal-carrito .field{ margin-bottom:12px; }
+  .modal-carrito .field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
+  .modal-carrito select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:14px;
+    font-family:'Work Sans',sans-serif; background:#fff; color:var(--ink);
+  }
+  #btnEnviarPedido{ width:100%; justify-content:center; border:none; cursor:pointer; }
+  #btnEnviarPedido:disabled{ opacity:.5; cursor:default; }
+
+  @media (min-width:640px){
+    .overlay-carrito{ align-items:center; }
+    .modal-carrito{ border-radius:16px; }
+  }
+
   .pasos{ display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
   .paso{ flex:1; min-width:200px; max-width:260px; text-align:center; }
   .paso .num{
@@ -213,6 +263,48 @@
   </a>
 </div>
 
+<!-- Carrito de porciones: aparece solo cuando hay algo agregado. -->
+<div class="cta-carrito" id="ctaCarrito">
+  <button type="button" class="btn-carrito" onclick="abrirCarrito()" aria-label="Ver pedido">
+    <svg viewBox="0 0 24 24" style="fill:none;" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 6h15l-1.5 9h-12z"/>
+      <path d="M6 6 4.5 3H2"/>
+      <circle cx="9" cy="20" r="1.3" style="fill:#fff;stroke:none;"/>
+      <circle cx="17" cy="20" r="1.3" style="fill:#fff;stroke:none;"/>
+    </svg>
+    <span class="badge-carrito" id="badgeCarrito">0</span>
+  </button>
+</div>
+
+<div class="overlay-carrito" id="overlayCarrito">
+  <div class="modal-carrito">
+    <div class="modal-header">
+      <h3>Tu pedido</h3>
+      <button type="button" class="cerrar" onclick="cerrarCarrito()" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="listaCarrito"></div>
+    <div class="carrito-total">
+      <span>Total</span>
+      <span id="totalCarrito">$0</span>
+    </div>
+    <div class="field">
+      <label>Entrega</label>
+      <select id="selectEntrega">
+        <option value="Retiro">Retiro</option>
+        <option value="Envío">Envío</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Forma de pago</label>
+      <select id="selectPago">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+      </select>
+    </div>
+    <button type="button" class="btn-whatsapp" id="btnEnviarPedido">Enviar pedido por WhatsApp</button>
+  </div>
+</div>
+
 <script>
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -251,8 +343,119 @@ function tarjetaProducto(p){
     </div>`;
 }
 
-document.getElementById('gridPorciones').innerHTML = PRODUCTOS.porciones.map(tarjetaProducto).join('');
+// ===== Carrito (solo para porciones) =====
+// Se guarda como { indiceEnPorciones: cantidad } en localStorage, así si la
+// persona cierra la página sin terminar el pedido no lo pierde.
+let carrito = {};
+
+function cargarCarrito(){
+  try { carrito = JSON.parse(localStorage.getItem('carritoLaMamu') || '{}'); }
+  catch (e) { carrito = {}; }
+}
+function guardarCarrito(){
+  try { localStorage.setItem('carritoLaMamu', JSON.stringify(carrito)); }
+  catch (e) { /* localStorage no disponible (modo privado, etc.) — no pasa nada */ }
+}
+
+window.cambiarCantidad = function (i, delta) {
+  const actual = carrito[i] || 0;
+  const nueva = Math.max(0, actual + delta);
+  if (nueva === 0) delete carrito[i]; else carrito[i] = nueva;
+  guardarCarrito();
+  const span = document.getElementById('cant-' + i);
+  if (span) span.textContent = carrito[i] || 0;
+  actualizarBadgeCarrito();
+};
+
+function actualizarBadgeCarrito(){
+  const totalItems = Object.values(carrito).reduce((a, c) => a + c, 0);
+  document.getElementById('badgeCarrito').textContent = totalItems;
+  document.getElementById('ctaCarrito').style.display = totalItems > 0 ? 'block' : 'none';
+}
+
+function itemsCarrito(){
+  return Object.entries(carrito)
+    .map(([i, cantidad]) => ({ producto: PRODUCTOS.porciones[i], cantidad }))
+    .filter((x) => x.producto);
+}
+
+window.abrirCarrito = function () {
+  const items = itemsCarrito();
+  let total = 0;
+  document.getElementById('listaCarrito').innerHTML = items.length
+    ? items.map(({ producto, cantidad }) => {
+        const subtotal = producto.precio * cantidad;
+        total += subtotal;
+        return `<div class="item-carrito">
+          <span class="item-nombre">${cantidad}x ${producto.nombre}</span>
+          <span>${fmt(subtotal)}</span>
+        </div>`;
+      }).join('')
+    : '<div class="carrito-vacio">Todavía no agregaste ninguna porción.</div>';
+  document.getElementById('totalCarrito').textContent = fmt(total);
+  document.getElementById('btnEnviarPedido').disabled = items.length === 0;
+  document.getElementById('overlayCarrito').style.display = 'flex';
+};
+
+window.cerrarCarrito = function () {
+  document.getElementById('overlayCarrito').style.display = 'none';
+};
+
+document.getElementById('overlayCarrito').addEventListener('click', (e) => {
+  if (e.target.id === 'overlayCarrito') cerrarCarrito();
+});
+
+document.getElementById('btnEnviarPedido').addEventListener('click', () => {
+  const items = itemsCarrito();
+  if (!items.length) return;
+  const entrega = document.getElementById('selectEntrega').value;
+  const pago = document.getElementById('selectPago').value;
+  let total = 0;
+  const lineas = items.map(({ producto, cantidad }) => {
+    const subtotal = producto.precio * cantidad;
+    total += subtotal;
+    return `- ${cantidad}x ${producto.nombre} (${fmt(subtotal)})`;
+  });
+  const mensaje = [
+    'Hola! Quiero hacer este pedido:',
+    ...lineas,
+    '',
+    `Total: ${fmt(total)}`,
+    `Entrega: ${entrega}`,
+    `Pago: ${pago}`,
+  ].join('\n');
+  window.open(linkWhatsapp(mensaje), '_blank', 'noopener');
+});
+
+function tarjetaPorcion(p, i){
+  const disponible = p.disponible !== false;
+  const foto = p.foto
+    ? `<img src="${p.foto}" alt="${p.nombre}">`
+    : p.nombre.charAt(0).toUpperCase();
+  const cantidad = carrito[i] || 0;
+  const control = disponible
+    ? `<div class="stepper">
+        <button type="button" class="stepper-btn" onclick="cambiarCantidad(${i}, -1)" aria-label="Restar">−</button>
+        <span class="stepper-cant" id="cant-${i}">${cantidad}</span>
+        <button type="button" class="stepper-btn" onclick="cambiarCantidad(${i}, 1)" aria-label="Sumar">+</button>
+      </div>`
+    : `<span class="pedir deshabilitado">Sin stock</span>`;
+  return `
+    <div class="card${disponible ? '' : ' sin-stock'}">
+      <div class="foto">${foto}${disponible ? '' : '<span class="badge-stock">Sin stock</span>'}</div>
+      <div class="info">
+        <h3>${p.nombre}</h3>
+        <p>${p.descripcion}</p>
+        <div class="precio">${fmt(p.precio)}</div>
+        ${control}
+      </div>
+    </div>`;
+}
+
+cargarCarrito();
+document.getElementById('gridPorciones').innerHTML = PRODUCTOS.porciones.map(tarjetaPorcion).join('');
 document.getElementById('gridTortas').innerHTML = PRODUCTOS.tortas.map(tarjetaProducto).join('');
+actualizarBadgeCarrito();
 
 const mensajeGenerico = 'Hola! Quería hacer un pedido.';
 document.getElementById('btnHeroWhatsapp').href = linkWhatsapp(mensajeGenerico);
