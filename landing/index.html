@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>La Mamu - cakes</title>
 <meta name="description" content="Porciones de torta y tortas enteras por encargo. Pedidos por WhatsApp." />
+<!-- Solo para el contador de visitas del footer — el resto de la landing
+     sigue sin depender de Supabase para nada. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
   :root{
@@ -140,6 +143,7 @@
   }
   footer .foot-social a:hover{ border-color:var(--butter); }
   footer .foot-social svg{ width:17px; height:17px; fill:#E9C9D2; }
+  footer .contador-visitas{ margin-top:16px; font-size:11.5px; color:rgba(233,201,210,.6); }
 
   .cta-flotante{
     position:fixed; right:18px; bottom:18px; z-index:10;
@@ -165,6 +169,11 @@
   // Código de país + característica + número, sin "+", sin espacios ni guiones.
   // Ej: Buenos Aires (011) 1234-5678 → '5491112345678'
   const WHATSAPP_NUMBER = '5493795695820';
+
+  // Mismo proyecto de Supabase que usa la app de gestión (app/index.html) —
+  // se usa acá solo para el contador de visitas del footer.
+  const SUPABASE_URL = 'https://ndzktunwjgigvjjpafhn.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kemt0dW53amdpZ3ZqanBhZmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzOTI4NDgsImV4cCI6MjEwNDk2ODg0OH0.2boQTZ3xCoGrB9ozNHQ89H5OzBggmuvd0sGWzKmi7vA';
 
   // Se suma al total del carrito cuando eligen "Envío" en vez de "Retiro".
   const COSTO_ENVIO = 1000;
@@ -264,6 +273,7 @@
         <svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg>
       </a>
     </div>
+    <p class="contador-visitas" id="contadorVisitas" style="display:none;"></p>
   </div>
 </footer>
 
@@ -503,6 +513,29 @@ const mensajeGenerico = 'Hola! Quería hacer un pedido.';
 document.getElementById('btnHeroWhatsapp').href = linkWhatsapp(mensajeGenerico);
 document.getElementById('btnFlotanteWhatsapp').href = linkWhatsapp(mensajeGenerico);
 document.getElementById('linkFooterWhatsapp').href = linkWhatsapp(mensajeGenerico);
+
+// ===== Contador de visitas =====
+// Cada carga de la página cuenta como una visita (no distingue visitantes
+// únicos). Si Supabase no responde por algún motivo, la landing sigue
+// funcionando igual — el contador simplemente no se muestra.
+(async function registrarVisitaYMostrarContador(){
+  try {
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { error: errorInsert } = await supabaseClient.from('visitas_landing').insert({});
+    if (errorInsert) throw errorInsert;
+    const { count, error: errorConteo } = await supabaseClient
+      .from('visitas_landing')
+      .select('*', { count: 'exact', head: true });
+    // Una consulta "head" no trae body, así que si la tabla no existe puede
+    // volver sin "error" pero con count en null — se chequean los dos casos.
+    if (errorConteo || count == null) throw errorConteo || new Error('conteo no disponible');
+    const el = document.getElementById('contadorVisitas');
+    el.textContent = `${Number(count).toLocaleString('es-AR')} visitas a esta página`;
+    el.style.display = 'block';
+  } catch (e) {
+    console.error('No se pudo registrar/mostrar el contador de visitas', e);
+  }
+})();
 </script>
 
 </body>
