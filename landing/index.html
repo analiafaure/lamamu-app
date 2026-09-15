@@ -530,7 +530,8 @@ document.getElementById('linkFooterWhatsapp').href = linkWhatsapp(mensajeGeneric
     // volver sin "error" pero con count en null — se chequean los dos casos.
     if (errorConteo || count == null) throw errorConteo || new Error('conteo no disponible');
     const el = document.getElementById('contadorVisitas');
-    el.textContent = `${Number(count).toLocaleString('es-AR')} visitas a esta página`;
+    const palabra = count === 1 ? 'visita' : 'visitas';
+    el.textContent = `${Number(count).toLocaleString('es-AR')} ${palabra} a esta página`;
     el.style.display = 'block';
   } catch (e) {
     console.error('No se pudo registrar/mostrar el contador de visitas', e);
