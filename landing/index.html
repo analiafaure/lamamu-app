@@ -18,6 +18,7 @@
   .wrap{ max-width:1000px; margin:0 auto; padding:0 24px; }
 
   header.hero{ background:var(--plum); color:var(--cream); padding:64px 0 56px; text-align:center; border-bottom:4px solid var(--butter); }
+  header.hero .logo{ max-height:110px; max-width:220px; margin:0 auto 18px; display:block; }
   header.hero .tag{ display:inline-block; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--butter); margin-bottom:10px; font-weight:600; }
   header.hero h1{ font-size:clamp(32px, 6vw, 52px); }
   header.hero p{ font-size:16px; color:#E9C9D2; max-width:480px; margin:14px auto 28px; }
@@ -91,16 +92,18 @@
 <script>
   // Código de país + característica + número, sin "+", sin espacios ni guiones.
   // Ej: Buenos Aires (011) 1234-5678 → '5491112345678'
-  const WHATSAPP_NUMBER = '5491100000000';
+  const WHATSAPP_NUMBER = '5493795695820';
+
+    const LOGO_URL = 'img/WhatsApp Image 2026-09-13 at 13.51.33.jpeg';
 
   const PRODUCTOS = {
     porciones: [
-      { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao con relleno de queso crema', precio: 2500, foto: '' },
-      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate', precio: 2500, foto: '' },
-      { nombre: 'Frutos rojos', descripcion: 'Vainilla con crema y frutos rojos frescos', precio: 2700, foto: '' },
-      { nombre: 'Limón', descripcion: 'Bizcochuelo de limón con merengue italiano', precio: 2500, foto: '' },
+      { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', precio: 7000, foto: 'img/20260911_093108~2.jpg' },
+      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
+      { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg' },
+      { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg' },
     ],
-    tortas: [
+  tortas: [
       { nombre: 'Torta chocolate — 20 porciones', descripcion: 'Ideal para cumpleaños y eventos grandes', precio: 35000, foto: '' },
       { nombre: 'Torta red velvet — 12 porciones', descripcion: 'Perfecta para reuniones más chicas', precio: 24000, foto: '' },
     ],
@@ -109,6 +112,7 @@
 
 <header class="hero">
   <div class="wrap">
+    <img class="logo" id="logoNegocio" src="" alt="" style="display:none;">
     <span class="tag">Hecho a mano · Por encargo</span>
     <h1>La Mamu - cakes</h1>
     <p>Porciones de torta los fines de semana y tortas enteras por encargo. Todo casero, todo fresco.</p>
@@ -174,6 +178,13 @@
 
 <script>
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+if (LOGO_URL) {
+  const logo = document.getElementById('logoNegocio');
+  logo.src = LOGO_URL;
+  logo.alt = 'Logo';
+  logo.style.display = 'block';
+}
 
 function linkWhatsapp(mensaje){
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
