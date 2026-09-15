@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestión de la tortería</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
+  :root{
+    --plum:#5E2439; --plum-dark:#421A29; --butter:hsl(41, 90%, 27%); --cream:#FBF7F0; --paper:#FFFFFF;
+    --ink:#2B2420; --ink-soft:#6B5F55; --line:#E6DDD0; --danger:#A6392E; --ok:#4C7A57; --radius:6px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:'Work Sans',sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:600; margin:0; }
+  .app{ display:flex; flex-direction:column; min-height:100vh; }
+  header.top{ background:var(--plum); color:var(--cream); padding:22px 28px 18px; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; border-bottom:4px solid var(--butter); }
+  header.top h1{ font-size:26px; }
+  header.top .sub{ font-size:13px; color:#E9C9D2; font-family:'Work Sans',sans-serif; }
+  .logout{ background:none; border:1px solid rgba(255,255,255,.4); color:#fff; padding:6px 12px; font-size:12.5px; border-radius:4px; cursor:pointer; }
+  nav.tabs{ display:flex; gap:2px; background:var(--plum-dark); padding:0 24px; overflow-x:auto; }
+  nav.tabs button{ background:none; border:none; color:#E9C9D2; font-family:'Work Sans',sans-serif; font-size:14px; font-weight:500; padding:12px 16px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  nav.tabs button.active{ color:#fff; border-bottom-color:var(--butter); }
+  nav.tabs button.disabled{ color:#8a6c76; cursor:default; }
+  main{ flex:1; padding:24px 28px 60px; max-width:980px; width:100%; margin:0 auto; }
+  .section{ display:none; } .section.active{ display:block; }
+  .panel{ background:var(--paper); border:1px solid var(--line); padding:20px 22px; margin-bottom:18px; }
+  .panel h2{ font-size:18px; margin-bottom:14px; }
+  form.inline{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom:16px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field label{ font-size:12px; color:var(--ink-soft); }
+  .field input, .field select{ font-family:'Work Sans',sans-serif; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; color:var(--ink); min-width:110px; }
+  .field.grow{ flex:1; min-width:160px; }
+  button.primary{ background:var(--plum); color:#fff; border:none; padding:9px 18px; font-family:'Work Sans',sans-serif; font-weight:600; font-size:14px; cursor:pointer; border-radius:var(--radius); }
+  button.primary:hover{ background:var(--plum-dark); }
+  button.primary:disabled{ opacity:.5; cursor:default; }
+  button.ghost{ background:none; border:1px solid var(--line); color:var(--ink-soft); padding:5px 10px; font-size:12.5px; cursor:pointer; border-radius:var(--radius); }
+  button.ghost:hover{ border-color:var(--danger); color:var(--danger); }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{ text-align:left; font-size:11.5px; color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:2px solid var(--line); }
+  td{ padding:9px 10px; border-bottom:1px solid var(--line); }
+  tr:last-child td{ border-bottom:none; }
+  td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .empty{ color:var(--ink-soft); font-size:13.5px; padding:10px 2px; }
+  .tag{ font-size:11px; padding:2px 8px; border-radius:20px; background:#F0E4D8; color:var(--ink-soft); }
+  .tag.low{ background:#F6DCD9; color:var(--danger); font-weight:600; }
+  .num.neg{ color:var(--danger); font-weight:600; }
+  .row{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .stat{ flex:1; min-width:180px; background:var(--paper); border:1px solid var(--line); border-left:4px solid var(--plum); padding:16px 18px; }
+  .stat.good{ border-left-color:var(--ok); } .stat.bad{ border-left-color:var(--danger); }
+  .stat .label{ font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .stat .value{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; }
+  .panel.receta-panel{ border-left:4px solid var(--butter); }
+  .receta-resumen{ margin-top:14px; font-size:14px; display:flex; gap:20px; flex-wrap:wrap; }
+  .receta-resumen b{ font-family:'Fraunces',serif; }
+  footer.note{ text-align:center; font-size:12px; color:var(--ink-soft); padding:18px; }
+
+  .login-screen{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--plum); padding:20px; }
+  .login-box{ background:var(--cream); padding:40px 36px; border-radius:6px; max-width:360px; width:100%; border-top:4px solid var(--butter); }
+  .login-box h1{ font-size:24px; margin-bottom:6px; }
+  .login-box p{ font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; }
+  .login-box input{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:4px; font-size:14px; margin-bottom:12px; font-family:'Work Sans',sans-serif; }
+  .login-box button{ width:100%; }
+  .login-msg{ margin-top:14px; font-size:13px; color:var(--ok); }
+  .login-msg.error{ color:var(--danger); }
+  .config-warning{ background:#F6DCD9; color:var(--danger); padding:14px 18px; font-size:13.5px; border-left:4px solid var(--danger); margin:20px; text-align:center; }
+
+  @media (max-width:640px){ main{ padding:18px 14px 50px; } header.top{ padding:18px 16px 14px; } form.inline{ flex-direction:column; align-items:stretch; } .field{ min-width:0; } }
+</style>
+</head>
+<body>
+
+<!-- =======================================================
+     CONFIGURACIÓN: completá con los datos de tu proyecto
+     (Project Settings > API en el dashboard de Supabase)
+     ======================================================= -->
+<script>
+  const SUPABASE_URL = 'https://ndzktunwjgigvjjpafhn.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kemt0dW53amdpZ3ZqanBhZmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzOTI4NDgsImV4cCI6MjEwNDk2ODg0OH0.2boQTZ3xCoGrB9ozNHQ89H5OzBggmuvd0sGWzKmi7vA';
+</script>
+
+<div id="configWarning" class="config-warning" style="display:none;">
+  Falta configurar SUPABASE_URL y SUPABASE_ANON_KEY arriba en el HTML.
+</div>
+
+<div id="loginScreen" class="login-screen" style="display:none;">
+  <div class="login-box">
+    <h1>La Mamu - cakes</h1>
+    <p>Ingresá tu mail y te mandamos un link para entrar, sin contraseña.</p>
+    <input type="email" id="loginEmail" placeholder="tu@mail.com" />
+    <button class="primary" id="loginBtn">Enviar link de acceso</button>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none;">
+  <header class="top">
+    <div>
+      <h1>La Mamu - cakes</h1>
+      <div class="sub">Gestión de insumos y stock</div>
+    </div>
+    <button class="logout" id="logoutBtn">Salir</button>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="resumen" class="active">Resumen</button>
+    <button data-tab="insumos">Insumos</button>
+    <button data-tab="productos">Productos y recetas</button>
+    <button data-tab="ventas">Ventas</button>
+    <button data-tab="reposicion">Reposición</button>
+    <button data-tab="gastos">Gastos</button>
+  </nav>
+
+  <main>
+    <section class="section active" id="tab-resumen">
+      <div class="row">
+        <div class="stat good" id="statVentasBox"><div class="label">Ventas del mes</div><div class="value" id="statVentasMes">$0</div></div>
+        <div class="stat bad" id="statGastosBox"><div class="label">Gastos del mes</div><div class="value" id="statGastosMes">$0</div></div>
+        <div class="stat" id="statGananciaBox"><div class="label">Ganancia neta del mes</div><div class="value" id="statGanancia">$0</div></div>
+      </div>
+      <div class="panel">
+        <h2>Insumos con stock bajo</h2>
+        <div id="lowStockList"></div>
+      </div>
+      <div class="panel">
+        <h2>Ranking de productos por margen</h2>
+        <table>
+          <thead><tr><th>Producto</th><th class="num">Margen</th><th class="num">% sobre precio</th></tr></thead>
+          <tbody id="rankingProductos"></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h2>Últimas ventas</h2>
+        <table>
+          <thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Total</th></tr></thead>
+          <tbody id="ultimasVentas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-insumos">
+      <div class="panel">
+        <h2>Agregar insumo</h2>
+        <form class="inline" id="formInsumo">
+          <div class="field grow"><label>Nombre</label><input type="text" name="nombre" placeholder="Ej: Harina 000" required></div>
+          <div class="field"><label>Cantidad inicial</label><input type="number" name="cantidad" min="0" step="0.01" value="0" required></div>
+          <div class="field"><label>Unidad</label>
+            <select name="unidad"><option>kg</option><option>g</option><option>l</option><option>ml</option><option>unidades</option></select>
+          </div>
+          <div class="field"><label>Costo unitario ($)</label><input type="number" name="costo" min="0" step="0.01" required></div>
+          <div class="field"><label>Stock mínimo</label><input type="number" name="minimo" min="0" step="0.01" value="0"></div>
+          <button type="submit" class="primary">Guardar</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Inventario actual</h2>
+        <table>
+          <thead><tr><th>Insumo</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Valor total</th><th></th><th></th></tr></thead>
+          <tbody id="listaInsumos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-productos">
+      <div class="panel">
+        <h2>Agregar producto</h2>
+        <form class="inline" id="formProducto">
+          <div class="field grow"><label>Nombre</label><input type="text" name="nombre" placeholder="Ej: Porción red velvet" required></div>
+          <div class="field"><label>Tipo</label>
+            <select name="tipo" id="selectTipoProducto"><option>Porción</option><option>Torta entera</option></select>
+          </div>
+          <div class="field"><label>Precio de venta ($)</label><input type="number" name="precio_venta" min="0" step="0.01" required></div>
+          <div class="field grow" id="campoProductoPadre" style="display:none;">
+            <label>¿Es porción de alguna torta ya cargada?</label>
+            <select name="producto_padre_id" id="selectProductoPadre">
+              <option value="">No — esta porción tiene receta propia</option>
+            </select>
+          </div>
+          <div class="field" id="campoPorciones" style="display:none;">
+            <label>Se corta en (porciones)</label>
+            <input type="number" name="porciones_por_torta" id="inputPorcionesPorTorta" min="1" step="1">
+          </div>
+          <button type="submit" class="primary">Guardar</button>
+        </form>
+        <p id="notaPorcionPadre" style="display:none; font-size:13px; color:var(--ink-soft); margin:10px 0 0;">Si elegís una torta, el costo/margen de la porción se calcula solo dividiendo la receta de esa torta — no hace falta cargarle una receta propia, y vender una porción no vuelve a descontar stock (ya se descontó al hacer la torta entera).</p>
+      </div>
+
+      <div class="panel">
+        <h2>Productos</h2>
+        <table>
+          <thead><tr><th>Producto</th><th>Tipo</th><th class="num">Precio venta</th><th class="num">Costo receta</th><th class="num">Margen</th><th></th><th></th><th></th></tr></thead>
+          <tbody id="listaProductos"></tbody>
+        </table>
+      </div>
+
+      <div class="panel receta-panel" id="panelReceta" style="display:none;">
+        <h2>Receta de <span id="recetaProductoNombre"></span></h2>
+        <table>
+          <thead><tr><th>Insumo</th><th class="num">Cantidad necesaria</th><th class="num">Costo parcial</th><th></th></tr></thead>
+          <tbody id="listaReceta"></tbody>
+        </table>
+        <form class="inline" id="formReceta" style="margin-top:14px;">
+          <div class="field grow"><label>Insumo</label><select name="insumo_id" id="selectInsumoReceta" required></select></div>
+          <div class="field"><label>Cantidad necesaria</label><input type="number" name="cantidad_necesaria" min="0" step="0.001" required></div>
+          <button type="submit" class="primary">Agregar a la receta</button>
+        </form>
+        <div class="receta-resumen" id="recetaResumen"></div>
+      </div>
+    </section>
+
+    <section class="section" id="tab-ventas">
+      <div class="panel">
+        <h2>Registrar venta</h2>
+        <form class="inline" id="formVenta">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field grow"><label>Producto</label>
+            <select name="producto_id" id="selectProductoVenta" required></select>
+          </div>
+          <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="1" value="1" required></div>
+          <div class="field"><label>Precio unitario ($)</label><input type="number" name="precio_unitario" min="0" step="0.01" required></div>
+          <button type="submit" class="primary">Agregar venta</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Historial de ventas</h2>
+        <table>
+          <thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Precio u.</th><th class="num">Total</th><th></th></tr></thead>
+          <tbody id="listaVentas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-reposicion">
+      <div class="panel">
+        <h2>Reponer stock</h2>
+        <form class="inline" id="formReposicion">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field grow"><label>Insumo</label><select name="insumo_id" id="selectInsumoReposicion" required></select></div>
+          <div class="field"><label>Cantidad comprada</label><input type="number" name="cantidad" min="0" step="0.01" required></div>
+          <div class="field"><label>Costo unitario ($)</label><input type="number" name="costo_unitario" min="0" step="0.01" required></div>
+          <button type="submit" class="primary">Registrar reposición</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Historial de reposiciones</h2>
+        <table>
+          <thead><tr><th>Fecha</th><th>Insumo</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Total</th></tr></thead>
+          <tbody id="listaReposiciones"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-gastos">
+      <div class="panel">
+        <h2>Registrar gasto</h2>
+        <p style="font-size:13px; color:var(--ink-soft); margin:-6px 0 14px;">Los gastos de reposición de insumos se generan solos desde la pestaña Reposición — no los cargues acá para no duplicarlos.</p>
+        <form class="inline" id="formGasto">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field grow"><label>Descripción</label><input type="text" name="descripcion" placeholder="Ej: Alquiler del local" required></div>
+          <div class="field"><label>Categoría</label>
+            <select name="categoria"><option>Servicios</option><option>Delivery/envíos</option><option>Insumos</option><option>Otro</option></select>
+          </div>
+          <div class="field"><label>Monto ($)</label><input type="number" name="monto" min="0" step="0.01" required></div>
+          <button type="submit" class="primary">Agregar gasto</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Historial de gastos</h2>
+        <table>
+          <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="num">Monto</th><th></th></tr></thead>
+          <tbody id="listaGastos"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <footer class="note">Datos guardados en tu propio proyecto de Supabase.</footer>
+</div>
+
+<script>
+const fmt = n => '$' + Number(n||0).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const esteMes = fecha => {
+  const d = new Date(fecha + 'T00:00:00');
+  const n = new Date();
+  return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+};
+
+let supabaseClient, currentUser = null;
+let insumos = [];
+let productosResumen = [];
+let productoSeleccionadoId = null;
+let ventas = [];
+let reposiciones = [];
+let gastos = [];
+
+function init(){
+  if (SUPABASE_URL.includes('TU-PROYECTO') || SUPABASE_ANON_KEY.includes('TU-ANON-KEY')) {
+    document.getElementById('configWarning').style.display = 'block';
+    return;
+  }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) { showApp(); loadInsumos(); loadProductosResumen(); loadVentas(); loadReposiciones(); loadGastos(); }
+    else showLogin();
+  });
+
+  document.querySelectorAll('nav.tabs button[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const msg = document.getElementById('loginMsg');
+    if (!email) return;
+    document.getElementById('loginBtn').disabled = true;
+    const { error } = await supabaseClient.auth.signInWithOtp({ email });
+    document.getElementById('loginBtn').disabled = false;
+    msg.className = 'login-msg' + (error ? ' error' : '');
+    msg.textContent = error ? error.message : 'Listo, revisá tu mail y tocá el link para entrar.';
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+  });
+}
+
+function showLogin(){
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appRoot').style.display = 'none';
+}
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
+}
+
+// ===== Resumen =====
+// Todo sale de lo que ya está cargado en memoria (ventas, gastos, insumos,
+// productosResumen) — no pega ninguna query propia. Se llama de nuevo cada
+// vez que cualquiera de esos cuatro termina de cargar o cambia.
+function renderResumen(){
+  const vMes = ventas.filter(v => esteMes(v.fecha));
+  const gMes = gastos.filter(g => esteMes(g.fecha));
+  const totalVentas = vMes.reduce((a, v) => a + Number(v.cantidad) * Number(v.precio_unitario), 0);
+  const totalGastos = gMes.reduce((a, g) => a + Number(g.monto), 0);
+  const ganancia = totalVentas - totalGastos;
+
+  document.getElementById('statVentasMes').textContent = fmt(totalVentas);
+  document.getElementById('statGastosMes').textContent = fmt(totalGastos);
+  document.getElementById('statGanancia').textContent = fmt(ganancia);
+  document.getElementById('statGananciaBox').className = 'stat ' + (ganancia >= 0 ? 'good' : 'bad');
+
+  const low = insumos.filter(i => Number(i.stock_minimo) > 0 && Number(i.cantidad) <= Number(i.stock_minimo));
+  document.getElementById('lowStockList').innerHTML = low.length
+    ? low.map(i => `<span class="tag low">${i.nombre}: ${i.cantidad} ${i.unidad}</span> `).join(' ')
+    : '<div class="empty">Ningún insumo por debajo del mínimo.</div>';
+
+  const ranking = [...productosResumen].sort((a, b) => Number(b.margen) - Number(a.margen));
+  document.getElementById('rankingProductos').innerHTML = ranking.length
+    ? ranking.map(p => {
+        const margenNeg = Number(p.margen) < 0;
+        const pct = Number(p.precio_venta) > 0 ? Math.round(Number(p.margen) / Number(p.precio_venta) * 100) + '%' : '—';
+        return `<tr>
+          <td>${p.nombre}</td>
+          <td class="num${margenNeg ? ' neg' : ''}">${fmt(p.margen)}</td>
+          <td class="num${margenNeg ? ' neg' : ''}">${pct}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="3" class="empty">Todavía no hay productos cargados.</td></tr>`;
+
+  const ult = ventas.slice(0, 6);
+  document.getElementById('ultimasVentas').innerHTML = ult.length
+    ? ult.map(v => `<tr>
+        <td>${v.fecha}</td>
+        <td>${v.productos?.nombre ?? '—'}</td>
+        <td class="num">${v.cantidad}</td>
+        <td class="num">${fmt(v.cantidad * v.precio_unitario)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" class="empty">Todavía no cargaste ventas.</td></tr>`;
+}
+
+async function loadInsumos(){
+  const { data, error } = await supabaseClient.from('insumos').select('*').order('nombre');
+  if (error) { console.error(error); return; }
+  insumos = data || [];
+  renderInsumos();
+  poblarSelectsInsumos();
+  renderResumen();
+}
+
+// Selects que dependen de la lista de insumos (receta y reposición) — se
+// repueblan cada vez que loadInsumos() trae datos frescos.
+function poblarSelectsInsumos(){
+  const opciones = insumos.length
+    ? insumos.map(i => `<option value="${i.id}">${i.nombre} (${i.unidad})</option>`).join('')
+    : '';
+  document.getElementById('selectInsumoReceta').innerHTML = opciones;
+  document.getElementById('selectInsumoReposicion').innerHTML = opciones;
+}
+
+function renderInsumos(){
+  const tbody = document.getElementById('listaInsumos');
+  tbody.innerHTML = insumos.length ? insumos.map(i => {
+    const low = Number(i.stock_minimo) > 0 && Number(i.cantidad) <= Number(i.stock_minimo);
+    return `<tr>
+      <td>${i.nombre} ${low ? '<span class="tag low">bajo</span>' : ''}</td>
+      <td class="num">${i.cantidad} ${i.unidad}</td>
+      <td class="num">${fmt(i.costo_unitario)}</td>
+      <td class="num">${fmt(i.cantidad * i.costo_unitario)}</td>
+      <td><button class="ghost" onclick="editarInsumo('${i.id}')">Editar</button></td>
+      <td><button class="ghost" onclick="borrarInsumo('${i.id}')">Borrar</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty">Sin insumos cargados todavía.</td></tr>`;
+}
+
+document.getElementById('formInsumo').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const nombre = f.get('nombre');
+  const existente = insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase());
+  const data = {
+    nombre,
+    cantidad: Number(f.get('cantidad')),
+    unidad: f.get('unidad'),
+    costo_unitario: Number(f.get('costo')),
+    stock_minimo: Number(f.get('minimo') || 0)
+  };
+  if (existente) {
+    await supabaseClient.from('insumos').update(data).eq('id', existente.id);
+  } else {
+    await supabaseClient.from('insumos').insert(data);
+  }
+  await loadInsumos();
+  e.target.reset();
+});
+
+window.borrarInsumo = async id => {
+  const { error } = await supabaseClient.from('insumos').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar: ' + error.message + '\n(Puede estar usado en una receta)'); return; }
+  await loadInsumos();
+};
+
+window.editarInsumo = async id => {
+  const i = insumos.find(x => x.id === id);
+  if (!i) return;
+  const cant = prompt('Nueva cantidad de "' + i.nombre + '" (' + i.unidad + '):', i.cantidad);
+  if (cant === null) return;
+  const costo = prompt('Nuevo costo unitario de "' + i.nombre + '":', i.costo_unitario);
+  if (costo === null) return;
+  await supabaseClient.from('insumos').update({ cantidad: Number(cant), costo_unitario: Number(costo) }).eq('id', id);
+  await loadInsumos();
+};
+
+// ===== Productos y recetas =====
+// costo_receta y margen se leen directo de vw_producto_costos (los calcula la
+// base, no hay que recalcular nada acá).
+async function loadProductosResumen(){
+  const { data, error } = await supabaseClient.from('vw_producto_costos').select('*').order('nombre');
+  if (error) { console.error(error); return; }
+  productosResumen = data || [];
+  renderProductosResumen();
+  poblarSelectProductosVenta();
+  poblarSelectProductoPadre();
+  if (productoSeleccionadoId) renderRecetaResumen();
+  renderResumen();
+}
+
+// Tortas enteras disponibles como "padre" para una porción — se repuebla
+// cada vez que cambian los productos, preservando la selección si sigue
+// existiendo.
+function poblarSelectProductoPadre(){
+  const select = document.getElementById('selectProductoPadre');
+  const actual = select.value;
+  const tortas = productosResumen.filter(p => p.tipo === 'Torta entera');
+  select.innerHTML = '<option value="">No — esta porción tiene receta propia</option>' +
+    tortas.map(p => `<option value="${p.producto_id}">${p.nombre}</option>`).join('');
+  if (actual && tortas.some(p => p.producto_id === actual)) select.value = actual;
+}
+
+function renderProductosResumen(){
+  const tbody = document.getElementById('listaProductos');
+  tbody.innerHTML = productosResumen.length ? productosResumen.map(p => {
+    const margenNeg = Number(p.margen) < 0;
+    const esPorcionDerivada = !!p.producto_padre_id;
+    const nombreCelda = esPorcionDerivada
+      ? `${p.nombre}<br><span class="tag">de: ${p.producto_padre_nombre} ÷ ${p.porciones_por_torta}</span>`
+      : p.nombre;
+    return `<tr>
+      <td>${nombreCelda}</td>
+      <td><span class="tag">${p.tipo}</span></td>
+      <td class="num">${fmt(p.precio_venta)}</td>
+      <td class="num">${fmt(p.costo_receta)}</td>
+      <td class="num${margenNeg ? ' neg' : ''}">${fmt(p.margen)}</td>
+      <td>${esPorcionDerivada ? '' : `<button class="ghost" onclick="abrirReceta('${p.producto_id}')">Receta</button>`}</td>
+      <td><button class="ghost" onclick="editarProducto('${p.producto_id}')">Editar</button></td>
+      <td><button class="ghost" onclick="borrarProducto('${p.producto_id}')">Borrar</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" class="empty">Sin productos cargados todavía.</td></tr>`;
+}
+
+// Los campos de "torta madre" solo tienen sentido para tipo 'Porción'.
+function actualizarCamposPorcion(){
+  const esPorcion = document.getElementById('selectTipoProducto').value === 'Porción';
+  document.getElementById('campoProductoPadre').style.display = esPorcion ? '' : 'none';
+  document.getElementById('campoPorciones').style.display = esPorcion ? '' : 'none';
+  document.getElementById('notaPorcionPadre').style.display = esPorcion ? '' : 'none';
+}
+document.getElementById('selectTipoProducto').addEventListener('change', actualizarCamposPorcion);
+actualizarCamposPorcion();
+
+document.getElementById('formProducto').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const productoPadreId = f.get('producto_padre_id') || null;
+  const { error } = await supabaseClient.from('productos').insert({
+    nombre: f.get('nombre'),
+    tipo: f.get('tipo'),
+    precio_venta: Number(f.get('precio_venta')),
+    producto_padre_id: productoPadreId,
+    porciones_por_torta: productoPadreId ? Number(f.get('porciones_por_torta')) : null
+  });
+  if (error) { alert('No se pudo guardar el producto: ' + error.message); return; }
+  await loadProductosResumen();
+  e.target.reset();
+  actualizarCamposPorcion();
+});
+
+window.editarProducto = async id => {
+  const p = productosResumen.find(x => x.producto_id === id);
+  if (!p) return;
+  const nombre = prompt('Nuevo nombre de "' + p.nombre + '":', p.nombre);
+  if (nombre === null) return;
+  const precio = prompt('Nuevo precio de venta de "' + nombre + '":', p.precio_venta);
+  if (precio === null) return;
+  await supabaseClient.from('productos').update({ nombre, precio_venta: Number(precio) }).eq('id', id);
+  await loadProductosResumen();
+};
+
+window.borrarProducto = async id => {
+  const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar: ' + error.message + '\n(Puede tener ventas registradas)'); return; }
+  if (productoSeleccionadoId === id) cerrarReceta();
+  await loadProductosResumen();
+};
+
+window.abrirReceta = async id => {
+  productoSeleccionadoId = id;
+  const p = productosResumen.find(x => x.producto_id === id);
+  document.getElementById('recetaProductoNombre').textContent = p ? p.nombre : '';
+  document.getElementById('panelReceta').style.display = 'block';
+  document.getElementById('panelReceta').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  await loadReceta();
+};
+
+function cerrarReceta(){
+  productoSeleccionadoId = null;
+  document.getElementById('panelReceta').style.display = 'none';
+}
+
+let recetaActual = [];
+
+async function loadReceta(){
+  const { data, error } = await supabaseClient
+    .from('receta_items')
+    .select('*, insumos(nombre, unidad, costo_unitario)')
+    .eq('producto_id', productoSeleccionadoId)
+    .order('created_at');
+  if (error) { console.error(error); return; }
+  recetaActual = data || [];
+  renderReceta();
+  renderRecetaResumen();
+}
+
+function renderReceta(){
+  const tbody = document.getElementById('listaReceta');
+  tbody.innerHTML = recetaActual.length ? recetaActual.map(r => {
+    const costoParcial = Number(r.cantidad_necesaria) * Number(r.insumos?.costo_unitario || 0);
+    return `<tr>
+      <td>${r.insumos?.nombre ?? '—'}</td>
+      <td class="num">${r.cantidad_necesaria} ${r.insumos?.unidad ?? ''}</td>
+      <td class="num">${fmt(costoParcial)}</td>
+      <td><button class="ghost" onclick="borrarRecetaItem('${r.id}')">Quitar</button></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="4" class="empty">Todavía no tiene insumos en la receta.</td></tr>`;
+}
+
+function renderRecetaResumen(){
+  const p = productosResumen.find(x => x.producto_id === productoSeleccionadoId);
+  const div = document.getElementById('recetaResumen');
+  if (!p) { div.innerHTML = ''; return; }
+  const margenNeg = Number(p.margen) < 0;
+  div.innerHTML = `
+    <span>Precio de venta: <b>${fmt(p.precio_venta)}</b></span>
+    <span>Costo de receta: <b>${fmt(p.costo_receta)}</b></span>
+    <span>Margen: <b class="${margenNeg ? 'neg' : ''}">${fmt(p.margen)}</b></span>
+  `;
+}
+
+document.getElementById('formReceta').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const insumoId = f.get('insumo_id');
+  const cantidad = Number(f.get('cantidad_necesaria'));
+  const existente = recetaActual.find(r => r.insumo_id === insumoId);
+  if (existente) {
+    await supabaseClient.from('receta_items').update({ cantidad_necesaria: cantidad }).eq('id', existente.id);
+  } else {
+    await supabaseClient.from('receta_items').insert({
+      producto_id: productoSeleccionadoId,
+      insumo_id: insumoId,
+      cantidad_necesaria: cantidad
+    });
+  }
+  await loadReceta();
+  await loadProductosResumen();
+  e.target.reset();
+});
+
+window.borrarRecetaItem = async id => {
+  await supabaseClient.from('receta_items').delete().eq('id', id);
+  await loadReceta();
+  await loadProductosResumen();
+};
+
+// ===== Ventas =====
+// El trigger de la base descuenta el stock según la receta del producto — acá
+// solo hace falta insertar y refrescar insumos para que se vea el nuevo stock.
+function poblarSelectProductosVenta(){
+  const select = document.getElementById('selectProductoVenta');
+  const actual = select.value;
+  select.innerHTML = productosResumen.length
+    ? productosResumen.map(p => `<option value="${p.producto_id}" data-precio="${p.precio_venta}">${p.nombre}</option>`).join('')
+    : '<option value="">Cargá un producto primero</option>';
+  if (actual && productosResumen.some(p => p.producto_id === actual)) select.value = actual;
+}
+
+document.getElementById('selectProductoVenta').addEventListener('change', e => {
+  const opt = e.target.selectedOptions[0];
+  const precio = opt?.dataset.precio;
+  if (precio) document.getElementById('formVenta').querySelector('[name=precio_unitario]').value = precio;
+});
+
+async function loadVentas(){
+  const { data, error } = await supabaseClient
+    .from('ventas')
+    .select('*, productos(nombre)')
+    .order('fecha', { ascending: false });
+  if (error) { console.error(error); return; }
+  ventas = data || [];
+  renderVentas();
+  renderResumen();
+}
+
+function renderVentas(){
+  const tbody = document.getElementById('listaVentas');
+  tbody.innerHTML = ventas.length ? ventas.map(v => `<tr>
+      <td>${v.fecha}</td>
+      <td>${v.productos?.nombre ?? '—'}</td>
+      <td class="num">${v.cantidad}</td>
+      <td class="num">${fmt(v.precio_unitario)}</td>
+      <td class="num">${fmt(v.cantidad * v.precio_unitario)}</td>
+      <td><button class="ghost" onclick="borrarVenta('${v.id}')">Borrar</button></td>
+    </tr>`).join('') : `<tr><td colspan="6" class="empty">Sin ventas cargadas.</td></tr>`;
+}
+
+document.getElementById('formVenta').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const productoId = f.get('producto_id');
+  if (!productoId) return;
+  const { error } = await supabaseClient.from('ventas').insert({
+    fecha: f.get('fecha'),
+    producto_id: productoId,
+    cantidad: Number(f.get('cantidad')),
+    precio_unitario: Number(f.get('precio_unitario'))
+  });
+  if (error) { alert('No se pudo registrar la venta: ' + error.message); return; }
+  await loadVentas();
+  await loadInsumos();
+  e.target.reset();
+  e.target.querySelector('[name=fecha]').value = todayStr();
+  poblarSelectProductosVenta();
+});
+
+window.borrarVenta = async id => {
+  const { error } = await supabaseClient.from('ventas').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar la venta: ' + error.message); return; }
+  await loadVentas();
+  await loadInsumos();
+};
+
+document.getElementById('formVenta').querySelector('[name=fecha]').value = todayStr();
+
+// ===== Reposición de stock =====
+// El trigger suma cantidad, actualiza costo_unitario y crea el gasto — acá
+// solo insertamos. No hay botón de borrar: no existe un trigger que revierta
+// el stock/costo que ya se aplicó, así que el historial queda como registro
+// fijo (igual que un movimiento contable ya asentado).
+async function loadReposiciones(){
+  const { data, error } = await supabaseClient
+    .from('reposiciones')
+    .select('*, insumos(nombre, unidad)')
+    .order('fecha', { ascending: false });
+  if (error) { console.error(error); return; }
+  reposiciones = data || [];
+  renderReposiciones();
+}
+
+function renderReposiciones(){
+  const tbody = document.getElementById('listaReposiciones');
+  tbody.innerHTML = reposiciones.length ? reposiciones.map(r => `<tr>
+      <td>${r.fecha}</td>
+      <td>${r.insumos?.nombre ?? '—'}</td>
+      <td class="num">${r.cantidad} ${r.insumos?.unidad ?? ''}</td>
+      <td class="num">${fmt(r.costo_unitario)}</td>
+      <td class="num">${fmt(r.monto_total)}</td>
+    </tr>`).join('') : `<tr><td colspan="5" class="empty">Sin reposiciones cargadas.</td></tr>`;
+}
+
+document.getElementById('formReposicion').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const insumoId = f.get('insumo_id');
+  if (!insumoId) return;
+  const { error } = await supabaseClient.from('reposiciones').insert({
+    fecha: f.get('fecha'),
+    insumo_id: insumoId,
+    cantidad: Number(f.get('cantidad')),
+    costo_unitario: Number(f.get('costo_unitario'))
+  });
+  if (error) { alert('No se pudo registrar la reposición: ' + error.message); return; }
+  await loadReposiciones();
+  await loadInsumos();
+  await loadProductosResumen(); // el costo_unitario nuevo cambia costo_receta/margen
+  await loadGastos(); // el trigger generó el gasto de "Reposición de ..." solo
+  e.target.reset();
+  e.target.querySelector('[name=fecha]').value = todayStr();
+});
+
+document.getElementById('formReposicion').querySelector('[name=fecha]').value = todayStr();
+
+// ===== Gastos =====
+// Se embebe reposiciones(id) para poder marcar los gastos que se generaron
+// solos desde una reposición — esos no se pueden borrar (la FK de
+// reposiciones.gasto_id no tiene on delete cascade, así que el borrado
+// falla con un error claro si se intenta).
+async function loadGastos(){
+  const { data, error } = await supabaseClient
+    .from('gastos')
+    .select('*, reposiciones(id)')
+    .order('fecha', { ascending: false });
+  if (error) { console.error(error); return; }
+  gastos = data || [];
+  renderGastos();
+  renderResumen();
+}
+
+function renderGastos(){
+  const tbody = document.getElementById('listaGastos');
+  tbody.innerHTML = gastos.length ? gastos.map(g => {
+    const esAutomatico = g.reposiciones && g.reposiciones.length > 0;
+    return `<tr>
+      <td>${g.fecha}</td>
+      <td>${g.descripcion} ${esAutomatico ? '<span class="tag">reposición</span>' : ''}</td>
+      <td><span class="tag">${g.categoria}</span></td>
+      <td class="num">${fmt(g.monto)}</td>
+      <td>${esAutomatico ? '' : `<button class="ghost" onclick="borrarGasto('${g.id}')">Borrar</button>`}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="5" class="empty">Sin gastos cargados.</td></tr>`;
+}
+
+document.getElementById('formGasto').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  await supabaseClient.from('gastos').insert({
+    fecha: f.get('fecha'),
+    descripcion: f.get('descripcion'),
+    categoria: f.get('categoria'),
+    monto: Number(f.get('monto'))
+  });
+  await loadGastos();
+  e.target.reset();
+  e.target.querySelector('[name=fecha]').value = todayStr();
+});
+
+window.borrarGasto = async id => {
+  const { error } = await supabaseClient.from('gastos').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar: ' + error.message + '\n(Puede ser un gasto generado por una reposición)'); return; }
+  await loadGastos();
+};
+
+document.getElementById('formGasto').querySelector('[name=fecha]').value = todayStr();
+
+init();
+</script>
+</body>
+</html>

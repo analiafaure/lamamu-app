@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestión de la tortería</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
+  :root{
+    --plum:#5E2439; --plum-dark:#421A29; --butter:#F2B93B; --cream:#FBF7F0; --paper:#FFFFFF;
+    --ink:#2B2420; --ink-soft:#6B5F55; --line:#E6DDD0; --danger:#A6392E; --ok:#4C7A57; --radius:6px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:'Work Sans',sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:600; margin:0; }
+  .app{ display:flex; flex-direction:column; min-height:100vh; }
+  header.top{ background:var(--plum); color:var(--cream); padding:22px 28px 18px; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; border-bottom:4px solid var(--butter); }
+  header.top h1{ font-size:26px; cursor:pointer; }
+  header.top h1:hover{ text-decoration:underline dotted var(--butter); }
+  header.top .sub{ font-size:13px; color:#E9C9D2; font-family:'Work Sans',sans-serif; }
+  .logout{ background:none; border:1px solid rgba(255,255,255,.4); color:#fff; padding:6px 12px; font-size:12.5px; border-radius:4px; cursor:pointer; }
+  nav.tabs{ display:flex; gap:2px; background:var(--plum-dark); padding:0 24px; overflow-x:auto; }
+  nav.tabs button{ background:none; border:none; color:#E9C9D2; font-family:'Work Sans',sans-serif; font-size:14px; font-weight:500; padding:12px 16px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  nav.tabs button.active{ color:#fff; border-bottom-color:var(--butter); }
+  nav.tabs button:hover{ color:#fff; }
+  main{ flex:1; padding:24px 28px 60px; max-width:980px; width:100%; margin:0 auto; }
+  .section{ display:none; } .section.active{ display:block; }
+  .row{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .stat{ flex:1; min-width:180px; background:var(--paper); border:1px solid var(--line); border-left:4px solid var(--plum); padding:16px 18px; }
+  .stat.good{ border-left-color:var(--ok); } .stat.bad{ border-left-color:var(--danger); }
+  .stat .label{ font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .stat .value{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; }
+  .panel{ background:var(--paper); border:1px solid var(--line); padding:20px 22px; margin-bottom:18px; }
+  .panel h2{ font-size:18px; margin-bottom:14px; }
+  form.inline{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-bottom:16px; }
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field label{ font-size:12px; color:var(--ink-soft); }
+  .field input, .field select{ font-family:'Work Sans',sans-serif; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; color:var(--ink); min-width:110px; }
+  .field.grow{ flex:1; min-width:160px; }
+  button.primary{ background:var(--plum); color:#fff; border:none; padding:9px 18px; font-family:'Work Sans',sans-serif; font-weight:600; font-size:14px; cursor:pointer; border-radius:var(--radius); }
+  button.primary:hover{ background:var(--plum-dark); }
+  button.primary:disabled{ opacity:.5; cursor:default; }
+  button.ghost{ background:none; border:1px solid var(--line); color:var(--ink-soft); padding:5px 10px; font-size:12.5px; cursor:pointer; border-radius:var(--radius); }
+  button.ghost:hover{ border-color:var(--danger); color:var(--danger); }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{ text-align:left; font-size:11.5px; color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:2px solid var(--line); }
+  td{ padding:9px 10px; border-bottom:1px solid var(--line); }
+  tr:last-child td{ border-bottom:none; }
+  td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .empty{ color:var(--ink-soft); font-size:13.5px; padding:10px 2px; }
+  .tag{ font-size:11px; padding:2px 8px; border-radius:20px; background:#F0E4D8; color:var(--ink-soft); }
+  .tag.low{ background:#F6DCD9; color:var(--danger); font-weight:600; }
+  footer.note{ text-align:center; font-size:12px; color:var(--ink-soft); padding:18px; }
+
+  /* LOGIN */
+  .login-screen{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--plum); padding:20px; }
+  .login-box{ background:var(--cream); padding:40px 36px; border-radius:6px; max-width:360px; width:100%; border-top:4px solid var(--butter); }
+  .login-box h1{ font-size:24px; margin-bottom:6px; }
+  .login-box p{ font-size:13.5px; color:var(--ink-soft); margin-bottom:22px; }
+  .login-box input{ width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:4px; font-size:14px; margin-bottom:12px; font-family:'Work Sans',sans-serif; }
+  .login-box button{ width:100%; }
+  .login-msg{ margin-top:14px; font-size:13px; color:var(--ok); }
+  .login-msg.error{ color:var(--danger); }
+  .config-warning{ background:#F6DCD9; color:var(--danger); padding:14px 18px; font-size:13.5px; border-left:4px solid var(--danger); margin-bottom:16px; }
+
+  @media (max-width:640px){ main{ padding:18px 14px 50px; } header.top{ padding:18px 16px 14px; } form.inline{ flex-direction:column; align-items:stretch; } .field{ min-width:0; } }
+</style>
+</head>
+<body>
+
+<!-- =======================================================
+     CONFIGURACIÓN: completá con los datos de tu proyecto
+     (Project Settings > API en el dashboard de Supabase)
+     ======================================================= -->
+<script>
+  const SUPABASE_URL = 'https://ndzktunwjgigvjjpafhn.supabase.co/rest/v1/';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kemt0dW53amdpZ3ZqanBhZmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzOTI4NDgsImV4cCI6MjEwNDk2ODg0OH0.2boQTZ3xCoGrB9ozNHQ89H5OzBggmuvd0sGWzKmi7vA';
+</script>
+
+<div id="configWarning" class="config-warning" style="display:none; margin:20px; text-align:center;">
+  Falta configurar SUPABASE_URL y SUPABASE_ANON_KEY arriba en el HTML (líneas al inicio del &lt;body&gt;).
+</div>
+
+<div id="loginScreen" class="login-screen" style="display:none;">
+  <div class="login-box">
+    <h1>Mi Tortería</h1>
+    <p>Ingresá tu mail y te mandamos un link para entrar, sin contraseña.</p>
+    <input type="email" id="loginEmail" placeholder="tu@mail.com" />
+    <button class="primary" id="loginBtn">Enviar link de acceso</button>
+    <div class="login-msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none;">
+  <header class="top">
+    <div>
+      <h1 id="bizName" title="Tocá para cambiar el nombre">Mi Tortería</h1>
+      <div class="sub">Gestión de ventas, stock y gastos</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="sub" id="today"></div>
+      <button class="logout" id="logoutBtn">Salir</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="resumen" class="active">Resumen</button>
+    <button data-tab="ventas">Ventas</button>
+    <button data-tab="stock">Stock</button>
+    <button data-tab="gastos">Gastos</button>
+  </nav>
+
+  <main>
+    <section class="section active" id="tab-resumen">
+      <div class="row">
+        <div class="stat good"><div class="label">Ventas del mes</div><div class="value" id="statVentasMes">$0</div></div>
+        <div class="stat bad"><div class="label">Gastos del mes</div><div class="value" id="statGastosMes">$0</div></div>
+        <div class="stat" id="statGananciaBox"><div class="label">Ganancia neta del mes</div><div class="value" id="statGanancia">$0</div></div>
+      </div>
+      <div class="panel"><h2>Insumos con stock bajo</h2><div id="lowStockList"></div></div>
+      <div class="panel">
+        <h2>Últimas ventas</h2>
+        <table><thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Total</th></tr></thead><tbody id="ultimasVentas"></tbody></table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-ventas">
+      <div class="panel">
+        <h2>Registrar venta</h2>
+        <form class="inline" id="formVenta">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field"><label>Tipo</label><select name="tipo"><option value="Porción">Porción</option><option value="Torta entera">Torta entera</option></select></div>
+          <div class="field grow"><label>Sabor / producto</label><input type="text" name="producto" placeholder="Ej: Red velvet" required></div>
+          <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="1" value="1" required></div>
+          <div class="field"><label>Precio unitario ($)</label><input type="number" name="precio" min="0" step="0.01" required></div>
+          <button type="submit" class="primary">Agregar venta</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Historial de ventas</h2>
+        <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th class="num">Cant.</th><th class="num">Precio u.</th><th class="num">Total</th><th></th></tr></thead><tbody id="listaVentas"></tbody></table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-stock">
+      <div class="panel">
+        <h2>Agregar / actualizar insumo</h2>
+        <form class="inline" id="formStock">
+          <div class="field grow"><label>Insumo</label><input type="text" name="nombre" placeholder="Ej: Harina 000" required></div>
+          <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="0" step="0.01" required></div>
+          <div class="field"><label>Unidad</label><select name="unidad"><option>kg</option><option>g</option><option>l</option><option>ml</option><option>unidades</option></select></div>
+          <div class="field"><label>Costo unit. ($)</label><input type="number" name="costo" min="0" step="0.01" required></div>
+          <div class="field"><label>Stock mínimo</label><input type="number" name="minimo" min="0" step="0.01" value="0"></div>
+          <button type="submit" class="primary">Guardar</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Inventario actual</h2>
+        <table><thead><tr><th>Insumo</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Valor total</th><th></th><th></th></tr></thead><tbody id="listaStock"></tbody></table>
+      </div>
+    </section>
+
+    <section class="section" id="tab-gastos">
+      <div class="panel">
+        <h2>Registrar gasto</h2>
+        <form class="inline" id="formGasto">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field grow"><label>Descripción</label><input type="text" name="descripcion" placeholder="Ej: Compra de harina y manteca" required></div>
+          <div class="field"><label>Categoría</label><select name="categoria"><option>Insumos</option><option>Servicios</option><option>Delivery/envíos</option><option>Otro</option></select></div>
+          <div class="field"><label>Monto ($)</label><input type="number" name="monto" min="0" step="0.01" required></div>
+          <button type="submit" class="primary">Agregar gasto</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>Historial de gastos</h2>
+        <table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="num">Monto</th><th></th></tr></thead><tbody id="listaGastos"></tbody></table>
+      </div>
+    </section>
+  </main>
+  <footer class="note">Datos guardados en tu propio proyecto de Supabase.</footer>
+</div>
+
+<script>
+const fmt = n => '$' + Number(n||0).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+let supabase, currentUser = null;
+let ventas = [], stock = [], gastos = [], nombreNegocio = 'Mi Tortería';
+
+function init(){
+  if (SUPABASE_URL.includes('TU-PROYECTO') || SUPABASE_ANON_KEY.includes('TU-ANON-KEY')) {
+    document.getElementById('configWarning').style.display = 'block';
+    return;
+  }
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) { showApp(); loadAll(); }
+    else showLogin();
+  });
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    const msg = document.getElementById('loginMsg');
+    if (!email) return;
+    document.getElementById('loginBtn').disabled = true;
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    document.getElementById('loginBtn').disabled = false;
+    msg.className = 'login-msg' + (error ? ' error' : '');
+    msg.textContent = error ? error.message : 'Listo, revisá tu mail y tocá el link para entrar.';
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+  });
+}
+
+function showLogin(){
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appRoot').style.display = 'none';
+}
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
+  document.getElementById('today').textContent = new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'});
+}
+
+async function loadAll(){
+  const [{data:v}, {data:s}, {data:g}, {data:c}] = await Promise.all([
+    supabase.from('ventas').select('*').order('fecha', {ascending:false}),
+    supabase.from('stock').select('*').order('nombre'),
+    supabase.from('gastos').select('*').order('fecha', {ascending:false}),
+    supabase.from('config').select('*').eq('user_id', currentUser.id).maybeSingle()
+  ]);
+  ventas = v || []; stock = s || []; gastos = g || [];
+  if (c) nombreNegocio = c.nombre_negocio;
+  else await supabase.from('config').insert({ user_id: currentUser.id, nombre_negocio: nombreNegocio });
+  document.getElementById('bizName').textContent = nombreNegocio;
+  renderAll();
+}
+
+function renderAll(){ renderResumen(); renderVentas(); renderStock(); renderGastos(); }
+
+function esteMes(fecha){
+  const d = new Date(fecha+'T00:00:00'); const n = new Date();
+  return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
+}
+
+function renderResumen(){
+  const vMes = ventas.filter(v=>esteMes(v.fecha));
+  const gMes = gastos.filter(g=>esteMes(g.fecha));
+  const totalVentas = vMes.reduce((a,v)=>a+v.cantidad*v.precio,0);
+  const totalGastos = gMes.reduce((a,g)=>a+g.monto,0);
+  const ganancia = totalVentas - totalGastos;
+  document.getElementById('statVentasMes').textContent = fmt(totalVentas);
+  document.getElementById('statGastosMes').textContent = fmt(totalGastos);
+  document.getElementById('statGanancia').textContent = fmt(ganancia);
+  document.getElementById('statGananciaBox').className = 'stat ' + (ganancia>=0 ? 'good' : 'bad');
+
+  const low = stock.filter(s=> Number(s.minimo)>0 && Number(s.cantidad) <= Number(s.minimo));
+  document.getElementById('lowStockList').innerHTML = low.length
+    ? low.map(s=>`<span class="tag low">${s.nombre}: ${s.cantidad} ${s.unidad}</span> `).join(' ')
+    : '<div class="empty">Ningún insumo por debajo del mínimo.</div>';
+
+  const ult = [...ventas].slice(0,6);
+  document.getElementById('ultimasVentas').innerHTML = ult.length
+    ? ult.map(v=>`<tr><td>${v.fecha}</td><td>${v.tipo} — ${v.producto}</td><td class="num">${v.cantidad}</td><td class="num">${fmt(v.cantidad*v.precio)}</td></tr>`).join('')
+    : `<tr><td colspan="4" class="empty">Todavía no cargaste ventas.</td></tr>`;
+}
+
+function renderVentas(){
+  document.getElementById('listaVentas').innerHTML = ventas.length ? ventas.map(v=>
+    `<tr><td>${v.fecha}</td><td>${v.tipo}</td><td>${v.producto}</td><td class="num">${v.cantidad}</td><td class="num">${fmt(v.precio)}</td><td class="num">${fmt(v.cantidad*v.precio)}</td>
+     <td><button class="ghost" onclick="borrarVenta('${v.id}')">Borrar</button></td></tr>`
+  ).join('') : `<tr><td colspan="7" class="empty">Sin ventas cargadas.</td></tr>`;
+}
+
+function renderStock(){
+  document.getElementById('listaStock').innerHTML = stock.length ? stock.map(s=>{
+    const low = Number(s.minimo)>0 && Number(s.cantidad) <= Number(s.minimo);
+    return `<tr><td>${s.nombre} ${low?'<span class="tag low">bajo</span>':''}</td><td class="num">${s.cantidad} ${s.unidad}</td><td class="num">${fmt(s.costo)}</td><td class="num">${fmt(s.cantidad*s.costo)}</td>
+    <td><button class="ghost" onclick="editarStock('${s.id}')">Editar</button></td>
+    <td><button class="ghost" onclick="borrarStock('${s.id}')">Borrar</button></td></tr>`;
+  }).join('') : `<tr><td colspan="6" class="empty">Sin insumos cargados.</td></tr>`;
+}
+
+function renderGastos(){
+  document.getElementById('listaGastos').innerHTML = gastos.length ? gastos.map(g=>
+    `<tr><td>${g.fecha}</td><td>${g.descripcion}</td><td><span class="tag">${g.categoria}</span></td><td class="num">${fmt(g.monto)}</td>
+     <td><button class="ghost" onclick="borrarGasto('${g.id}')">Borrar</button></td></tr>`
+  ).join('') : `<tr><td colspan="5" class="empty">Sin gastos cargados.</td></tr>`;
+}
+
+document.getElementById('formVenta').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  await supabase.from('ventas').insert({
+    fecha: f.get('fecha'), tipo: f.get('tipo'), producto: f.get('producto'),
+    cantidad: Number(f.get('cantidad')), precio: Number(f.get('precio'))
+  });
+  await loadAll(); e.target.reset();
+  e.target.querySelector('[name=fecha]').value = todayStr();
+});
+
+document.getElementById('formStock').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const nombre = f.get('nombre');
+  const existente = stock.find(s=> s.nombre.toLowerCase() === nombre.toLowerCase());
+  const data = { nombre, cantidad:Number(f.get('cantidad')), unidad:f.get('unidad'), costo:Number(f.get('costo')), minimo:Number(f.get('minimo')||0) };
+  if (existente) await supabase.from('stock').update(data).eq('id', existente.id);
+  else await supabase.from('stock').insert(data);
+  await loadAll(); e.target.reset();
+});
+
+document.getElementById('formGasto').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  await supabase.from('gastos').insert({
+    fecha: f.get('fecha'), descripcion: f.get('descripcion'), categoria: f.get('categoria'), monto: Number(f.get('monto'))
+  });
+  await loadAll(); e.target.reset();
+  e.target.querySelector('[name=fecha]').value = todayStr();
+});
+
+window.borrarVenta = async id => { await supabase.from('ventas').delete().eq('id', id); await loadAll(); };
+window.borrarStock = async id => { await supabase.from('stock').delete().eq('id', id); await loadAll(); };
+window.borrarGasto = async id => { await supabase.from('gastos').delete().eq('id', id); await loadAll(); };
+window.editarStock = async id => {
+  const s = stock.find(x=>x.id===id); if(!s) return;
+  const cant = prompt('Nueva cantidad de "'+s.nombre+'" ('+s.unidad+'):', s.cantidad);
+  if (cant===null) return;
+  await supabase.from('stock').update({ cantidad: Number(cant) }).eq('id', id);
+  await loadAll();
+};
+
+document.getElementById('bizName').addEventListener('click', async ()=>{
+  const n = prompt('Nombre del negocio:', nombreNegocio);
+  if (n) { nombreNegocio = n; document.getElementById('bizName').textContent = n;
+    await supabase.from('config').update({ nombre_negocio: n }).eq('user_id', currentUser.id); }
+});
+
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('formVenta').querySelector('[name=fecha]').value = todayStr();
+document.getElementById('formGasto').querySelector('[name=fecha]').value = todayStr();
+
+init();
+</script>
+</body>
+</html>

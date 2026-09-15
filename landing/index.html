@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>La Mamu - cakes</title>
+<meta name="description" content="Porciones de torta y tortas enteras por encargo. Pedidos por WhatsApp." />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
+  :root{
+    --plum:#5E2439; --plum-dark:#421A29; --butter:#B8860B; --cream:#FBF7F0; --paper:#FFFFFF;
+    --ink:#2B2420; --ink-soft:#6B5F55; --line:#E6DDD0; --radius:8px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--cream); color:var(--ink); font-family:'Work Sans',sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:'Fraunces',serif; font-weight:600; margin:0; }
+  a{ color:inherit; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:0 24px; }
+
+  header.hero{ background:var(--plum); color:var(--cream); padding:64px 0 56px; text-align:center; border-bottom:4px solid var(--butter); }
+  header.hero .tag{ display:inline-block; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--butter); margin-bottom:10px; font-weight:600; }
+  header.hero h1{ font-size:clamp(32px, 6vw, 52px); }
+  header.hero p{ font-size:16px; color:#E9C9D2; max-width:480px; margin:14px auto 28px; }
+
+  .btn-whatsapp{
+    display:inline-flex; align-items:center; gap:8px; background:var(--butter); color:#fff;
+    text-decoration:none; padding:13px 26px; border-radius:999px; font-weight:600; font-size:15px;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+  .btn-whatsapp:hover{ filter:brightness(1.06); }
+  .btn-whatsapp svg{ width:18px; height:18px; fill:#fff; }
+
+  section{ padding:56px 0; }
+  section.alt{ background:var(--paper); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .section-title{ text-align:center; margin-bottom:8px; font-size:28px; }
+  .section-sub{ text-align:center; color:var(--ink-soft); font-size:14.5px; margin-bottom:36px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px; }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+  .card .foto{
+    aspect-ratio:4/3; background:linear-gradient(135deg, var(--plum), var(--plum-dark));
+    display:flex; align-items:center; justify-content:center; color:var(--butter);
+    font-family:'Fraunces',serif; font-size:40px; font-weight:600;
+  }
+  .card .foto img{ width:100%; height:100%; object-fit:cover; }
+  .card .info{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .card h3{ font-size:17px; }
+  .card p{ font-size:13.5px; color:var(--ink-soft); margin:0; flex:1; line-height:1.4; }
+  .card .precio{ font-family:'Fraunces',serif; font-size:20px; font-weight:600; color:var(--plum); }
+  .card .pedir{
+    margin-top:10px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--cream); border:1px solid var(--line); color:var(--plum); text-decoration:none;
+    padding:9px 14px; border-radius:6px; font-size:13.5px; font-weight:600;
+  }
+  .card .pedir:hover{ border-color:var(--plum); }
+
+  .pasos{ display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+  .paso{ flex:1; min-width:200px; max-width:260px; text-align:center; }
+  .paso .num{
+    width:40px; height:40px; border-radius:50%; background:var(--plum); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600;
+    margin:0 auto 12px;
+  }
+  .paso h3{ font-size:15.5px; margin-bottom:6px; }
+  .paso p{ font-size:13.5px; color:var(--ink-soft); margin:0; }
+
+  footer{ background:var(--plum-dark); color:#E9C9D2; padding:32px 0; text-align:center; font-size:13px; }
+  footer .foot-brand{ font-family:'Fraunces',serif; color:#fff; font-size:17px; margin-bottom:6px; }
+  footer a{ color:var(--butter); text-decoration:none; }
+
+  .cta-flotante{
+    position:fixed; right:18px; bottom:18px; z-index:10;
+  }
+  .cta-flotante .btn-whatsapp{ padding:12px 18px; font-size:14px; }
+
+  @media (max-width:640px){
+    header.hero{ padding:48px 0 40px; }
+    section{ padding:40px 0; }
+    .pasos{ gap:28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =======================================================
+     CONFIGURACIÓN: reemplazá el número de WhatsApp y la lista de
+     productos/precios/descripciones por los datos reales del negocio.
+     Los "foto" son opcionales — si no se completan, la tarjeta muestra un
+     placeholder con la inicial del producto en vez de romper el layout.
+     ======================================================= -->
+<script>
+  // Código de país + característica + número, sin "+", sin espacios ni guiones.
+  // Ej: Buenos Aires (011) 1234-5678 → '5491112345678'
+  const WHATSAPP_NUMBER = '5491100000000';
+
+  const PRODUCTOS = {
+    porciones: [
+      { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao con relleno de queso crema', precio: 2500, foto: '' },
+      { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate', precio: 2500, foto: '' },
+      { nombre: 'Frutos rojos', descripcion: 'Vainilla con crema y frutos rojos frescos', precio: 2700, foto: '' },
+      { nombre: 'Limón', descripcion: 'Bizcochuelo de limón con merengue italiano', precio: 2500, foto: '' },
+    ],
+    tortas: [
+      { nombre: 'Torta chocolate — 20 porciones', descripcion: 'Ideal para cumpleaños y eventos grandes', precio: 35000, foto: '' },
+      { nombre: 'Torta red velvet — 12 porciones', descripcion: 'Perfecta para reuniones más chicas', precio: 24000, foto: '' },
+    ],
+  };
+</script>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Hecho a mano · Por encargo</span>
+    <h1>La Mamu - cakes</h1>
+    <p>Porciones de torta los fines de semana y tortas enteras por encargo. Todo casero, todo fresco.</p>
+    <a class="btn-whatsapp" id="btnHeroWhatsapp" href="#" target="_blank" rel="noopener">
+      <svg viewBox="0 0 32 32"><path d="M16.001 3C9.107 3 3.5 8.607 3.5 15.5c0 2.294.62 4.44 1.7 6.29L3 29l7.4-2.15A12.44 12.44 0 0 0 16 28c6.894 0 12.5-5.607 12.5-12.5S22.895 3 16.001 3Zm0 22.7c-2 0-3.86-.55-5.46-1.5l-.39-.23-4.39 1.28 1.3-4.28-.25-.44a10.16 10.16 0 0 1-1.56-5.4C5.25 9.73 10.02 5 16 5c5.98 0 10.75 4.73 10.75 10.5S21.98 25.7 16 25.7Zm5.86-7.86c-.32-.16-1.9-.94-2.2-1.04-.3-.11-.51-.16-.73.16-.21.32-.84 1.04-1.03 1.25-.19.21-.38.24-.7.08-.32-.16-1.35-.5-2.57-1.6-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.73-1.77-1-2.42-.26-.63-.53-.55-.73-.56-.19-.01-.4-.01-.62-.01-.21 0-.56.08-.86.4-.29.32-1.13 1.1-1.13 2.7 0 1.6 1.16 3.14 1.32 3.36.16.21 2.29 3.5 5.56 4.9.78.34 1.38.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.9-.78 2.16-1.53.27-.75.27-1.4.19-1.53-.08-.13-.29-.21-.61-.37Z"/></svg>
+      Pedir por WhatsApp
+    </a>
+  </div>
+</header>
+
+<section id="porciones">
+  <div class="wrap">
+    <h2 class="section-title">Porciones</h2>
+    <p class="section-sub">Disponibles los fines de semana — avisá con tiempo para reservar la tuya</p>
+    <div class="grid" id="gridPorciones"></div>
+  </div>
+</section>
+
+<section class="alt" id="tortas">
+  <div class="wrap">
+    <h2 class="section-title">Tortas enteras por encargo</h2>
+    <p class="section-sub">Para cumpleaños, reuniones y eventos — coordinamos tamaño y fecha de entrega por WhatsApp</p>
+    <div class="grid" id="gridTortas"></div>
+  </div>
+</section>
+
+<section id="como-pedir">
+  <div class="wrap">
+    <h2 class="section-title">¿Cómo pedís?</h2>
+    <p class="section-sub"></p>
+    <div class="pasos">
+      <div class="paso">
+        <div class="num">1</div>
+        <h3>Elegís tu producto</h3>
+        <p>Mirá las porciones o tortas enteras disponibles arriba.</p>
+      </div>
+      <div class="paso">
+        <div class="num">2</div>
+        <h3>Nos escribís por WhatsApp</h3>
+        <p>Tocás "Pedir" y se abre un mensaje ya armado con lo que elegiste.</p>
+      </div>
+      <div class="paso">
+        <div class="num">3</div>
+        <h3>Coordinamos entrega</h3>
+        <p>Confirmamos fecha, forma de pago y retiro o envío.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-brand">La Mamu - cakes</div>
+    <p>Pedidos por <a id="linkFooterWhatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a></p>
+  </div>
+</footer>
+
+<div class="cta-flotante">
+  <a class="btn-whatsapp" id="btnFlotanteWhatsapp" href="#" target="_blank" rel="noopener">
+    <svg viewBox="0 0 32 32"><path d="M16.001 3C9.107 3 3.5 8.607 3.5 15.5c0 2.294.62 4.44 1.7 6.29L3 29l7.4-2.15A12.44 12.44 0 0 0 16 28c6.894 0 12.5-5.607 12.5-12.5S22.895 3 16.001 3Zm0 22.7c-2 0-3.86-.55-5.46-1.5l-.39-.23-4.39 1.28 1.3-4.28-.25-.44a10.16 10.16 0 0 1-1.56-5.4C5.25 9.73 10.02 5 16 5c5.98 0 10.75 4.73 10.75 10.5S21.98 25.7 16 25.7Zm5.86-7.86c-.32-.16-1.9-.94-2.2-1.04-.3-.11-.51-.16-.73.16-.21.32-.84 1.04-1.03 1.25-.19.21-.38.24-.7.08-.32-.16-1.35-.5-2.57-1.6-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.38.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.73-1.77-1-2.42-.26-.63-.53-.55-.73-.56-.19-.01-.4-.01-.62-.01-.21 0-.56.08-.86.4-.29.32-1.13 1.1-1.13 2.7 0 1.6 1.16 3.14 1.32 3.36.16.21 2.29 3.5 5.56 4.9.78.34 1.38.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.9-.78 2.16-1.53.27-.75.27-1.4.19-1.53-.08-.13-.29-.21-.61-.37Z"/></svg>
+  </a>
+</div>
+
+<script>
+const fmt = n => '$' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+function linkWhatsapp(mensaje){
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
+}
+
+function tarjetaProducto(p){
+  const foto = p.foto
+    ? `<img src="${p.foto}" alt="${p.nombre}">`
+    : p.nombre.charAt(0).toUpperCase();
+  const mensaje = `Hola! Quiero pedir: ${p.nombre} (${fmt(p.precio)})`;
+  return `
+    <div class="card">
+      <div class="foto">${foto}</div>
+      <div class="info">
+        <h3>${p.nombre}</h3>
+        <p>${p.descripcion}</p>
+        <div class="precio">${fmt(p.precio)}</div>
+        <a class="pedir" href="${linkWhatsapp(mensaje)}" target="_blank" rel="noopener">Pedir por WhatsApp</a>
+      </div>
+    </div>`;
+}
+
+document.getElementById('gridPorciones').innerHTML = PRODUCTOS.porciones.map(tarjetaProducto).join('');
+document.getElementById('gridTortas').innerHTML = PRODUCTOS.tortas.map(tarjetaProducto).join('');
+
+const mensajeGenerico = 'Hola! Quería hacer un pedido.';
+document.getElementById('btnHeroWhatsapp').href = linkWhatsapp(mensajeGenerico);
+document.getElementById('btnFlotanteWhatsapp').href = linkWhatsapp(mensajeGenerico);
+document.getElementById('linkFooterWhatsapp').href = linkWhatsapp(mensajeGenerico);
+</script>
+
+</body>
+</html>
