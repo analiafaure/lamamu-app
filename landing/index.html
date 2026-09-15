@@ -101,6 +101,11 @@
   .item-carrito .item-nombre{ font-weight:600; }
   .carrito-total{ display:flex; justify-content:space-between; font-weight:700; font-size:16px; padding:14px 0; border-bottom:1px solid var(--line); margin:4px 0 14px; }
   .carrito-vacio{ color:var(--ink-soft); font-size:13.5px; padding:16px 0; text-align:center; }
+  .info-transferencia{
+    background:var(--cream); border:1px solid var(--line); border-radius:6px; padding:10px 12px;
+    font-size:12.5px; color:var(--ink-soft); line-height:1.4; margin-bottom:14px;
+  }
+  .info-transferencia b{ color:var(--plum); }
   .modal-carrito .field{ margin-bottom:12px; }
   .modal-carrito .field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
   .modal-carrito select{
@@ -160,6 +165,11 @@
   // Código de país + característica + número, sin "+", sin espacios ni guiones.
   // Ej: Buenos Aires (011) 1234-5678 → '5491112345678'
   const WHATSAPP_NUMBER = '5493795695820';
+
+  // Se suma al total del carrito cuando eligen "Envío" en vez de "Retiro".
+  const COSTO_ENVIO = 1000;
+  // Alias para transferencias — se muestra en el carrito cuando eligen "Transferencia".
+  const ALIAS_TRANSFERENCIA = 'lamamu.cakes';
 
     const LOGO_URL = 'img/logo.jpg';
 
@@ -283,6 +293,10 @@
       <button type="button" class="cerrar" onclick="cerrarCarrito()" aria-label="Cerrar">✕</button>
     </div>
     <div id="listaCarrito"></div>
+    <div class="item-carrito" id="lineaEnvio" style="display:none;">
+      <span>Envío</span>
+      <span id="montoEnvio">$0</span>
+    </div>
     <div class="carrito-total">
       <span>Total</span>
       <span id="totalCarrito">$0</span>
@@ -291,7 +305,7 @@
       <label>Entrega</label>
       <select id="selectEntrega">
         <option value="Retiro">Retiro</option>
-        <option value="Envío">Envío</option>
+        <option value="Envío">Envío (+$1.000)</option>
       </select>
     </div>
     <div class="field">
@@ -300,6 +314,9 @@
         <option value="Efectivo">Efectivo</option>
         <option value="Transferencia">Transferencia</option>
       </select>
+    </div>
+    <div class="info-transferencia" id="infoTransferencia" style="display:none;">
+      Transferí a alias <b id="aliasTransferencia"></b> y mandanos el comprobante por WhatsApp para confirmar el pedido.
     </div>
     <button type="button" class="btn-whatsapp" id="btnEnviarPedido">Enviar pedido por WhatsApp</button>
   </div>
@@ -379,21 +396,38 @@ function itemsCarrito(){
     .filter((x) => x.producto);
 }
 
+function subtotalCarrito(items){
+  return items.reduce((a, { producto, cantidad }) => a + producto.precio * cantidad, 0);
+}
+
+// Recalcula total/envío/aviso de transferencia según lo que esté elegido en
+// los selects — se llama al abrir el carrito y cada vez que cambian.
+function actualizarResumenCarrito(){
+  const items = itemsCarrito();
+  const subtotal = subtotalCarrito(items);
+  const conEnvio = document.getElementById('selectEntrega').value === 'Envío';
+  const envio = conEnvio ? COSTO_ENVIO : 0;
+
+  document.getElementById('lineaEnvio').style.display = conEnvio ? 'flex' : 'none';
+  document.getElementById('montoEnvio').textContent = fmt(envio);
+  document.getElementById('totalCarrito').textContent = fmt(subtotal + envio);
+
+  const esTransferencia = document.getElementById('selectPago').value === 'Transferencia';
+  document.getElementById('aliasTransferencia').textContent = ALIAS_TRANSFERENCIA;
+  document.getElementById('infoTransferencia').style.display = esTransferencia ? 'block' : 'none';
+
+  document.getElementById('btnEnviarPedido').disabled = items.length === 0;
+}
+
 window.abrirCarrito = function () {
   const items = itemsCarrito();
-  let total = 0;
   document.getElementById('listaCarrito').innerHTML = items.length
-    ? items.map(({ producto, cantidad }) => {
-        const subtotal = producto.precio * cantidad;
-        total += subtotal;
-        return `<div class="item-carrito">
+    ? items.map(({ producto, cantidad }) => `<div class="item-carrito">
           <span class="item-nombre">${cantidad}x ${producto.nombre}</span>
-          <span>${fmt(subtotal)}</span>
-        </div>`;
-      }).join('')
+          <span>${fmt(producto.precio * cantidad)}</span>
+        </div>`).join('')
     : '<div class="carrito-vacio">Todavía no agregaste ninguna porción.</div>';
-  document.getElementById('totalCarrito').textContent = fmt(total);
-  document.getElementById('btnEnviarPedido').disabled = items.length === 0;
+  actualizarResumenCarrito();
   document.getElementById('overlayCarrito').style.display = 'flex';
 };
 
@@ -405,24 +439,32 @@ document.getElementById('overlayCarrito').addEventListener('click', (e) => {
   if (e.target.id === 'overlayCarrito') cerrarCarrito();
 });
 
+document.getElementById('selectEntrega').addEventListener('change', actualizarResumenCarrito);
+document.getElementById('selectPago').addEventListener('change', actualizarResumenCarrito);
+
 document.getElementById('btnEnviarPedido').addEventListener('click', () => {
   const items = itemsCarrito();
   if (!items.length) return;
   const entrega = document.getElementById('selectEntrega').value;
   const pago = document.getElementById('selectPago').value;
-  let total = 0;
-  const lineas = items.map(({ producto, cantidad }) => {
-    const subtotal = producto.precio * cantidad;
-    total += subtotal;
-    return `- ${cantidad}x ${producto.nombre} (${fmt(subtotal)})`;
-  });
+  const subtotal = subtotalCarrito(items);
+  const envio = entrega === 'Envío' ? COSTO_ENVIO : 0;
+
+  const lineas = items.map(({ producto, cantidad }) =>
+    `- ${cantidad}x ${producto.nombre} (${fmt(producto.precio * cantidad)})`
+  );
+  if (envio > 0) lineas.push(`- Envío (${fmt(envio)})`);
+
   const mensaje = [
     'Hola! Quiero hacer este pedido:',
     ...lineas,
     '',
-    `Total: ${fmt(total)}`,
+    `Total: ${fmt(subtotal + envio)}`,
     `Entrega: ${entrega}`,
     `Pago: ${pago}`,
+    ...(pago === 'Transferencia'
+      ? [`Transferí a alias ${ALIAS_TRANSFERENCIA} y te mando el comprobante ahora.`]
+      : []),
   ].join('\n');
   window.open(linkWhatsapp(mensaje), '_blank', 'noopener');
 });
