@@ -118,6 +118,7 @@
         <div class="stat good" id="statVentasBox"><div class="label">Ventas del mes</div><div class="value" id="statVentasMes">$0</div></div>
         <div class="stat bad" id="statGastosBox"><div class="label">Gastos del mes</div><div class="value" id="statGastosMes">$0</div></div>
         <div class="stat" id="statGananciaBox"><div class="label">Ganancia neta del mes</div><div class="value" id="statGanancia">$0</div></div>
+        <div class="stat" id="statVisitasBox"><div class="label">Visitas a la landing</div><div class="value" id="statVisitas">—</div></div>
       </div>
       <div class="panel">
         <h2>Insumos con stock bajo</h2>
@@ -307,7 +308,7 @@ function init(){
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user || null;
-    if (currentUser) { showApp(); loadInsumos(); loadProductosResumen(); loadVentas(); loadReposiciones(); loadGastos(); }
+    if (currentUser) { showApp(); loadInsumos(); loadProductosResumen(); loadVentas(); loadReposiciones(); loadGastos(); loadVisitasLanding(); }
     else showLogin();
   });
 
@@ -801,6 +802,18 @@ window.borrarGasto = async id => {
 };
 
 document.getElementById('formGasto').querySelector('[name=fecha]').value = todayStr();
+
+// ===== Visitas a la landing =====
+// Solo lectura acá — la landing (landing/index.html) es la que inserta una
+// fila por cada carga de página. Este número es privado: no se muestra en
+// la landing pública, solo acá adentro (logueada).
+async function loadVisitasLanding(){
+  const { count, error } = await supabaseClient
+    .from('visitas_landing')
+    .select('*', { count: 'exact', head: true });
+  if (error) { console.error(error); return; }
+  document.getElementById('statVisitas').textContent = Number(count ?? 0).toLocaleString('es-AR');
+}
 
 init();
 </script>

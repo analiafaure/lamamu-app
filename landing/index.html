@@ -143,7 +143,6 @@
   }
   footer .foot-social a:hover{ border-color:var(--butter); }
   footer .foot-social svg{ width:17px; height:17px; fill:#E9C9D2; }
-  footer .contador-visitas{ margin-top:16px; font-size:11.5px; color:rgba(233,201,210,.6); }
 
   .cta-flotante{
     position:fixed; right:18px; bottom:18px; z-index:10;
@@ -273,7 +272,6 @@
         <svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg>
       </a>
     </div>
-    <p class="contador-visitas" id="contadorVisitas" style="display:none;"></p>
   </div>
 </footer>
 
@@ -515,26 +513,14 @@ document.getElementById('btnFlotanteWhatsapp').href = linkWhatsapp(mensajeGeneri
 document.getElementById('linkFooterWhatsapp').href = linkWhatsapp(mensajeGenerico);
 
 // ===== Contador de visitas =====
-// Cada carga de la página cuenta como una visita (no distingue visitantes
-// únicos). Si Supabase no responde por algún motivo, la landing sigue
-// funcionando igual — el contador simplemente no se muestra.
-(async function registrarVisitaYMostrarContador(){
+// Solo registra la visita — es un dato privado para vos, se consulta desde
+// la app de gestión (Resumen), no se muestra acá en la página pública.
+(async function registrarVisita(){
   try {
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { error: errorInsert } = await supabaseClient.from('visitas_landing').insert({});
-    if (errorInsert) throw errorInsert;
-    const { count, error: errorConteo } = await supabaseClient
-      .from('visitas_landing')
-      .select('*', { count: 'exact', head: true });
-    // Una consulta "head" no trae body, así que si la tabla no existe puede
-    // volver sin "error" pero con count en null — se chequean los dos casos.
-    if (errorConteo || count == null) throw errorConteo || new Error('conteo no disponible');
-    const el = document.getElementById('contadorVisitas');
-    const palabra = count === 1 ? 'visita' : 'visitas';
-    el.textContent = `${Number(count).toLocaleString('es-AR')} ${palabra} a esta página`;
-    el.style.display = 'block';
+    await supabaseClient.from('visitas_landing').insert({});
   } catch (e) {
-    console.error('No se pudo registrar/mostrar el contador de visitas', e);
+    console.error('No se pudo registrar la visita', e);
   }
 })();
 </script>
