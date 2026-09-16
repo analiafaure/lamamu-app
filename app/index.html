@@ -54,6 +54,8 @@
   .panel.receta-panel{ border-left:4px solid var(--butter); }
   .receta-resumen{ margin-top:14px; font-size:14px; display:flex; gap:20px; flex-wrap:wrap; }
   .receta-resumen b{ font-family:'Fraunces',serif; }
+  .preview-costo{ margin-top:-10px; margin-bottom:16px; font-size:13px; color:var(--ink-soft); }
+  .preview-costo b{ color:var(--plum); }
   footer.note{ text-align:center; font-size:12px; color:var(--ink-soft); padding:18px; }
 
   .login-screen{ min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--plum); padding:20px; }
@@ -145,14 +147,15 @@
         <h2>Agregar insumo</h2>
         <form class="inline" id="formInsumo">
           <div class="field grow"><label>Nombre</label><input type="text" name="nombre" placeholder="Ej: Harina 000" required></div>
-          <div class="field"><label>Cantidad inicial</label><input type="number" name="cantidad" min="0" step="0.01" value="0" required></div>
+          <div class="field"><label>Cantidad inicial</label><input type="number" name="cantidad" id="cantidadInsumo" min="0" step="0.01" value="0" required></div>
           <div class="field"><label>Unidad</label>
             <select name="unidad"><option>kg</option><option>g</option><option>l</option><option>ml</option><option>unidades</option></select>
           </div>
-          <div class="field"><label>Costo unitario ($)</label><input type="number" name="costo" min="0" step="0.01" required></div>
+          <div class="field"><label>Costo total pagado ($)</label><input type="number" name="costoTotal" id="costoTotalInsumo" min="0" step="0.01" required></div>
           <div class="field"><label>Stock mínimo</label><input type="number" name="minimo" min="0" step="0.01" value="0"></div>
           <button type="submit" class="primary">Guardar</button>
         </form>
+        <p class="preview-costo" id="previewCostoInsumo"></p>
       </div>
 
       <div class="panel">
@@ -240,10 +243,11 @@
         <form class="inline" id="formReposicion">
           <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
           <div class="field grow"><label>Insumo</label><select name="insumo_id" id="selectInsumoReposicion" required></select></div>
-          <div class="field"><label>Cantidad comprada</label><input type="number" name="cantidad" min="0" step="0.01" required></div>
-          <div class="field"><label>Costo unitario ($)</label><input type="number" name="costo_unitario" min="0" step="0.01" required></div>
+          <div class="field"><label>Cantidad comprada</label><input type="number" name="cantidad" id="cantidadReposicion" min="0" step="0.01" required></div>
+          <div class="field"><label>Costo total pagado ($)</label><input type="number" name="costoTotal" id="costoTotalReposicion" min="0" step="0.01" required></div>
           <button type="submit" class="primary">Registrar reposición</button>
         </form>
+        <p class="preview-costo" id="previewCostoReposicion"></p>
       </div>
 
       <div class="panel">
@@ -425,16 +429,36 @@ function renderInsumos(){
   }).join('') : `<tr><td colspan="6" class="empty">Sin insumos cargados todavía.</td></tr>`;
 }
 
+// Se carga cantidad + lo que pagaste en total (no el costo por unidad, para
+// no tener que calcularlo a mano) — el costo_unitario que se guarda sale de
+// dividir uno por otro.
+function actualizarPreviewCostoInsumo(){
+  const cantidad = Number(document.getElementById('cantidadInsumo').value);
+  const costoTotal = Number(document.getElementById('costoTotalInsumo').value);
+  const unidad = document.getElementById('formInsumo').querySelector('[name=unidad]').value;
+  const preview = document.getElementById('previewCostoInsumo');
+  if (cantidad > 0 && costoTotal > 0) {
+    preview.textContent = `= ${fmt(costoTotal / cantidad)} por ${unidad}`;
+  } else {
+    preview.textContent = '';
+  }
+}
+document.getElementById('cantidadInsumo').addEventListener('input', actualizarPreviewCostoInsumo);
+document.getElementById('costoTotalInsumo').addEventListener('input', actualizarPreviewCostoInsumo);
+document.getElementById('formInsumo').querySelector('[name=unidad]').addEventListener('change', actualizarPreviewCostoInsumo);
+
 document.getElementById('formInsumo').addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const nombre = f.get('nombre');
+  const cantidad = Number(f.get('cantidad'));
+  const costoTotal = Number(f.get('costoTotal'));
   const existente = insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase());
   const data = {
     nombre,
-    cantidad: Number(f.get('cantidad')),
+    cantidad,
     unidad: f.get('unidad'),
-    costo_unitario: Number(f.get('costo')),
+    costo_unitario: cantidad > 0 ? costoTotal / cantidad : 0,
     stock_minimo: Number(f.get('minimo') || 0)
   };
   if (existente) {
@@ -444,6 +468,7 @@ document.getElementById('formInsumo').addEventListener('submit', async e => {
   }
   await loadInsumos();
   e.target.reset();
+  document.getElementById('previewCostoInsumo').textContent = '';
 });
 
 window.borrarInsumo = async id => {
@@ -729,16 +754,36 @@ function renderReposiciones(){
     </tr>`).join('') : `<tr><td colspan="5" class="empty">Sin reposiciones cargadas.</td></tr>`;
 }
 
+// Mismo criterio que en Insumos: se carga cantidad comprada + costo total
+// pagado, no el costo por unidad — se divide uno por otro solo.
+function actualizarPreviewCostoReposicion(){
+  const cantidad = Number(document.getElementById('cantidadReposicion').value);
+  const costoTotal = Number(document.getElementById('costoTotalReposicion').value);
+  const insumoId = document.getElementById('selectInsumoReposicion').value;
+  const insumo = insumos.find(i => i.id === insumoId);
+  const preview = document.getElementById('previewCostoReposicion');
+  if (cantidad > 0 && costoTotal > 0 && insumo) {
+    preview.textContent = `= ${fmt(costoTotal / cantidad)} por ${insumo.unidad}`;
+  } else {
+    preview.textContent = '';
+  }
+}
+document.getElementById('cantidadReposicion').addEventListener('input', actualizarPreviewCostoReposicion);
+document.getElementById('costoTotalReposicion').addEventListener('input', actualizarPreviewCostoReposicion);
+document.getElementById('selectInsumoReposicion').addEventListener('change', actualizarPreviewCostoReposicion);
+
 document.getElementById('formReposicion').addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const insumoId = f.get('insumo_id');
   if (!insumoId) return;
+  const cantidad = Number(f.get('cantidad'));
+  const costoTotal = Number(f.get('costoTotal'));
   const { error } = await supabaseClient.from('reposiciones').insert({
     fecha: f.get('fecha'),
     insumo_id: insumoId,
-    cantidad: Number(f.get('cantidad')),
-    costo_unitario: Number(f.get('costo_unitario'))
+    cantidad,
+    costo_unitario: cantidad > 0 ? costoTotal / cantidad : 0
   });
   if (error) { alert('No se pudo registrar la reposición: ' + error.message); return; }
   await loadReposiciones();
@@ -747,6 +792,7 @@ document.getElementById('formReposicion').addEventListener('submit', async e => 
   await loadGastos(); // el trigger generó el gasto de "Reposición de ..." solo
   e.target.reset();
   e.target.querySelector('[name=fecha]').value = todayStr();
+  document.getElementById('previewCostoReposicion').textContent = '';
 });
 
 document.getElementById('formReposicion').querySelector('[name=fecha]').value = todayStr();
