@@ -111,10 +111,15 @@
   .info-transferencia b{ color:var(--plum); }
   .modal-carrito .field{ margin-bottom:12px; }
   .modal-carrito .field label{ display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:4px; }
-  .modal-carrito select{
+  .modal-carrito select, .modal-carrito input[type="text"]{
     width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:14px;
     font-family:'Work Sans',sans-serif; background:#fff; color:var(--ink);
   }
+  .check-santa-catalina{
+    display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft);
+    margin-bottom:12px; cursor:pointer;
+  }
+  .check-santa-catalina input{ width:16px; height:16px; accent-color:var(--plum); flex-shrink:0; }
   #btnEnviarPedido{ width:100%; justify-content:center; border:none; cursor:pointer; }
   #btnEnviarPedido:disabled{ opacity:.5; cursor:default; }
 
@@ -188,9 +193,10 @@
   const PRODUCTOS = {
     porciones: [
       { nombre: 'Red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', precio: 7000, foto: 'img/20260911_093108~2.jpg' },
+       { nombre: 'Clasica LaManu (Buttercream)', descripcion: 'Bizcocho de vainilla con relleno de chantilly y ganache de choco + una cobertura de buttercream', precio: 8000, foto: 'img/20260917_095459~2.jpg' },
       { nombre: 'Chocolate', descripcion: 'Bizcochuelo húmedo con ganache de chocolate y chantilly con reduccion de frutilla', precio: 7000, foto: 'img/20260904_095041~2.jpg', disponible: false  },
-      { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg' },
-      { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg' },
+      { nombre: 'Frutilla', descripcion: 'Vainilla con crema chantilly y reduccion de frutilla', precio: 7000, foto: 'img/20260911_093037~2.jpg', disponible: false  },
+      { nombre: 'Oreo', descripcion: 'Bizcochuelo de chocolate con crema oreo y dulce de leche', precio: 7000, foto: 'img/20260911_093207~3.jpg', disponible: false  },
       { nombre: 'Estilo Balcarce', descripcion: 'Bizcochuelo de vainilla con relleno de dulce de leche + merengue y chantilly + durazno', precio: 7000, foto: 'img/20260904_094428~2.jpg', disponible: false },
      ],
   tortas: [
@@ -198,7 +204,8 @@
       { nombre: 'Torta red velvet', descripcion: 'Bizcochuelo de cacao (suave) con relleno de queso crema', foto: 'img/20260910_124008~2.jpg' },
       { nombre: 'Torta clasica LaMamu', descripcion: 'Bizcochuelo de vainilla con relleno de ganache de cho y chantilly', foto: 'img/20260828_142039~2.jpg' },
       { nombre: 'Torta estilo balcarce', descripcion: 'Bizcochuelo de vainilla con relleno de dulce de leche + merengue y chantilly + durazno', foto: 'img/20260904_093618~2.jpg' },
-    
+      { nombre: 'Torta clasica LaMamu (Buttercream)', descripcion: 'Bizcochuelo de vainilla con relleno de ganache de cho y chantilly + cobertura de buttercream', foto: 'img/20260917_095024~2.jpg' },
+  
     ],
   };
 </script>
@@ -316,6 +323,16 @@
         <option value="Envío">Envío (+$1.000)</option>
       </select>
     </div>
+    <div id="camposEnvio" style="display:none;">
+      <label class="check-santa-catalina">
+        <input type="checkbox" id="checkSantaCatalina">
+        Es en el barrio Santa Catalina (envío gratis)
+      </label>
+      <div class="field">
+        <label>Dirección de entrega</label>
+        <input type="text" id="inputDireccion" placeholder="Calle, número, referencia">
+      </div>
+    </div>
     <div class="field">
       <label>Forma de pago</label>
       <select id="selectPago">
@@ -408,23 +425,32 @@ function subtotalCarrito(items){
   return items.reduce((a, { producto, cantidad }) => a + producto.precio * cantidad, 0);
 }
 
+// Barrio con envío gratis — si en algún momento cambia o se suman otros,
+// se edita/agranda acá nomás.
+const BARRIO_ENVIO_GRATIS = 'Santa Catalina';
+
 // Recalcula total/envío/aviso de transferencia según lo que esté elegido en
 // los selects — se llama al abrir el carrito y cada vez que cambian.
 function actualizarResumenCarrito(){
   const items = itemsCarrito();
   const subtotal = subtotalCarrito(items);
   const conEnvio = document.getElementById('selectEntrega').value === 'Envío';
-  const envio = conEnvio ? COSTO_ENVIO : 0;
+  const esSantaCatalina = document.getElementById('checkSantaCatalina').checked;
+  const envio = conEnvio && !esSantaCatalina ? COSTO_ENVIO : 0;
 
+  document.getElementById('camposEnvio').style.display = conEnvio ? 'block' : 'none';
   document.getElementById('lineaEnvio').style.display = conEnvio ? 'flex' : 'none';
-  document.getElementById('montoEnvio').textContent = fmt(envio);
+  document.getElementById('lineaEnvio').querySelector('span:first-child').textContent =
+    esSantaCatalina ? `Envío (${BARRIO_ENVIO_GRATIS})` : 'Envío';
+  document.getElementById('montoEnvio').textContent = esSantaCatalina ? 'Gratis' : fmt(envio);
   document.getElementById('totalCarrito').textContent = fmt(subtotal + envio);
 
   const esTransferencia = document.getElementById('selectPago').value === 'Transferencia';
   document.getElementById('aliasTransferencia').textContent = ALIAS_TRANSFERENCIA;
   document.getElementById('infoTransferencia').style.display = esTransferencia ? 'block' : 'none';
 
-  document.getElementById('btnEnviarPedido').disabled = items.length === 0;
+  const direccion = document.getElementById('inputDireccion').value.trim();
+  document.getElementById('btnEnviarPedido').disabled = items.length === 0 || (conEnvio && !direccion);
 }
 
 window.abrirCarrito = function () {
@@ -449,19 +475,30 @@ document.getElementById('overlayCarrito').addEventListener('click', (e) => {
 
 document.getElementById('selectEntrega').addEventListener('change', actualizarResumenCarrito);
 document.getElementById('selectPago').addEventListener('change', actualizarResumenCarrito);
+document.getElementById('checkSantaCatalina').addEventListener('change', actualizarResumenCarrito);
+document.getElementById('inputDireccion').addEventListener('input', actualizarResumenCarrito);
 
 document.getElementById('btnEnviarPedido').addEventListener('click', () => {
   const items = itemsCarrito();
   if (!items.length) return;
   const entrega = document.getElementById('selectEntrega').value;
   const pago = document.getElementById('selectPago').value;
+  const esSantaCatalina = document.getElementById('checkSantaCatalina').checked;
+  const direccion = document.getElementById('inputDireccion').value.trim();
+  if (entrega === 'Envío' && !direccion) {
+    alert('Falta la dirección de entrega.');
+    return;
+  }
   const subtotal = subtotalCarrito(items);
-  const envio = entrega === 'Envío' ? COSTO_ENVIO : 0;
+  const conEnvio = entrega === 'Envío';
+  const envio = conEnvio && !esSantaCatalina ? COSTO_ENVIO : 0;
 
   const lineas = items.map(({ producto, cantidad }) =>
     `- ${cantidad}x ${producto.nombre} (${fmt(producto.precio * cantidad)})`
   );
-  if (envio > 0) lineas.push(`- Envío (${fmt(envio)})`);
+  if (conEnvio) {
+    lineas.push(esSantaCatalina ? `- Envío (${BARRIO_ENVIO_GRATIS}): Gratis` : `- Envío (${fmt(envio)})`);
+  }
 
   const mensaje = [
     'Hola! Quiero hacer este pedido:',
@@ -469,6 +506,7 @@ document.getElementById('btnEnviarPedido').addEventListener('click', () => {
     '',
     `Total: ${fmt(subtotal + envio)}`,
     `Entrega: ${entrega}`,
+    ...(conEnvio ? [`Dirección: ${direccion}`] : []),
     `Pago: ${pago}`,
     ...(pago === 'Transferencia'
       ? [`Transferí a alias ${ALIAS_TRANSFERENCIA} y te mando el comprobante ahora.`]
