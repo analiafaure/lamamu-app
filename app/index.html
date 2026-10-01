@@ -38,6 +38,9 @@
   button.ghost{ background:none; border:1px solid var(--line); color:var(--ink-soft); padding:5px 10px; font-size:12.5px; cursor:pointer; border-radius:var(--radius); }
   button.ghost:hover{ border-color:var(--danger); color:var(--danger); }
   table{ width:100%; border-collapse:collapse; font-size:14px; }
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-scroll table{ width:auto; min-width:100%; }
+  .table-scroll th, .table-scroll td{ white-space:nowrap; }
   th{ text-align:left; font-size:11.5px; color:var(--ink-soft); font-weight:600; padding:8px 10px; border-bottom:2px solid var(--line); }
   td{ padding:9px 10px; border-bottom:1px solid var(--line); }
   tr:last-child td{ border-bottom:none; }
@@ -128,17 +131,21 @@
       </div>
       <div class="panel">
         <h2>Ranking de productos por margen</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Producto</th><th class="num">Margen</th><th class="num">% sobre precio</th></tr></thead>
           <tbody id="rankingProductos"></tbody>
         </table>
+        </div>
       </div>
       <div class="panel">
         <h2>Últimas ventas</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Total</th></tr></thead>
           <tbody id="ultimasVentas"></tbody>
         </table>
+        </div>
       </div>
     </section>
 
@@ -160,16 +167,18 @@
 
       <div class="panel">
         <h2>Inventario actual</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Insumo</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Valor total</th><th></th><th></th></tr></thead>
           <tbody id="listaInsumos"></tbody>
         </table>
+        </div>
       </div>
     </section>
 
     <section class="section" id="tab-productos">
       <div class="panel">
-        <h2>Agregar producto</h2>
+        <h2 id="tituloFormProducto">Agregar producto</h2>
         <form class="inline" id="formProducto">
           <div class="field grow"><label>Nombre</label><input type="text" name="nombre" placeholder="Ej: Porción red velvet" required></div>
           <div class="field"><label>Tipo</label>
@@ -186,25 +195,49 @@
             <label>Se corta en (porciones)</label>
             <input type="number" name="porciones_por_torta" id="inputPorcionesPorTorta" min="1" step="1">
           </div>
-          <button type="submit" class="primary">Guardar</button>
+          <button type="submit" class="primary" id="btnGuardarProducto">Guardar</button>
+          <button type="button" class="ghost" id="btnCancelarEdicionProducto" style="display:none;">Cancelar</button>
         </form>
         <p id="notaPorcionPadre" style="display:none; font-size:13px; color:var(--ink-soft); margin:10px 0 0;">Si elegís una torta, el costo/margen de la porción se calcula solo dividiendo la receta de esa torta — no hace falta cargarle una receta propia, y vender una porción no vuelve a descontar stock (ya se descontó al hacer la torta entera).</p>
       </div>
 
+      <div class="panel" id="panelHorneada" style="display:none;">
+        <h2>Registrar horneada</h2>
+        <p style="font-size:13px; color:var(--ink-soft); margin:-6px 0 14px;">Hiciste una torta entera: se descuentan los insumos de su receta y se suman las porciones a lo disponible para vender.</p>
+        <form class="inline" id="formHorneada">
+          <div class="field"><label>Fecha</label><input type="date" name="fecha" required></div>
+          <div class="field grow"><label>Torta</label>
+            <select name="producto_id" id="selectTortaHorneada" required></select>
+          </div>
+          <div class="field"><label>Cantidad horneada</label><input type="number" name="cantidad" min="1" step="1" value="1" required></div>
+          <button type="submit" class="primary">Registrar horneada</button>
+        </form>
+        <div class="table-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Torta</th><th class="num">Cantidad</th></tr></thead>
+          <tbody id="listaHorneadas"></tbody>
+        </table>
+        </div>
+      </div>
+
       <div class="panel">
         <h2>Productos</h2>
+        <div class="table-scroll">
         <table>
-          <thead><tr><th>Producto</th><th>Tipo</th><th class="num">Precio venta</th><th class="num">Costo receta</th><th class="num">Margen</th><th></th><th></th><th></th></tr></thead>
+          <thead><tr><th>Producto</th><th>Tipo</th><th class="num">Precio venta</th><th class="num">Costo receta</th><th class="num">Margen</th><th></th><th></th><th></th><th></th></tr></thead>
           <tbody id="listaProductos"></tbody>
         </table>
+        </div>
       </div>
 
       <div class="panel receta-panel" id="panelReceta" style="display:none;">
         <h2>Receta de <span id="recetaProductoNombre"></span></h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Insumo</th><th class="num">Cantidad necesaria</th><th class="num">Costo parcial</th><th></th></tr></thead>
           <tbody id="listaReceta"></tbody>
         </table>
+        </div>
         <form class="inline" id="formReceta" style="margin-top:14px;">
           <div class="field grow"><label>Insumo</label><select name="insumo_id" id="selectInsumoReceta" required></select></div>
           <div class="field"><label>Cantidad necesaria</label><input type="number" name="cantidad_necesaria" min="0" step="0.001" required></div>
@@ -226,14 +259,17 @@
           <div class="field"><label>Precio unitario ($)</label><input type="number" name="precio_unitario" min="0" step="0.01" required></div>
           <button type="submit" class="primary">Agregar venta</button>
         </form>
+        <p id="stockPorcionVenta" style="display:none; font-size:13px; color:var(--ink-soft); margin:-6px 0 0;"></p>
       </div>
 
       <div class="panel">
         <h2>Historial de ventas</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Precio u.</th><th class="num">Total</th><th></th></tr></thead>
           <tbody id="listaVentas"></tbody>
         </table>
+        </div>
       </div>
     </section>
 
@@ -252,10 +288,12 @@
 
       <div class="panel">
         <h2>Historial de reposiciones</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Fecha</th><th>Insumo</th><th class="num">Cantidad</th><th class="num">Costo unit.</th><th class="num">Total</th></tr></thead>
           <tbody id="listaReposiciones"></tbody>
         </table>
+        </div>
       </div>
     </section>
 
@@ -276,10 +314,12 @@
 
       <div class="panel">
         <h2>Historial de gastos</h2>
+        <div class="table-scroll">
         <table>
           <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="num">Monto</th><th></th></tr></thead>
           <tbody id="listaGastos"></tbody>
         </table>
+        </div>
       </div>
     </section>
   </main>
@@ -302,6 +342,7 @@ let productoSeleccionadoId = null;
 let ventas = [];
 let reposiciones = [];
 let gastos = [];
+let horneadas = [];
 
 function init(){
   if (SUPABASE_URL.includes('TU-PROYECTO') || SUPABASE_ANON_KEY.includes('TU-ANON-KEY')) {
@@ -312,7 +353,7 @@ function init(){
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user || null;
-    if (currentUser) { showApp(); loadInsumos(); loadProductosResumen(); loadVentas(); loadReposiciones(); loadGastos(); loadVisitasLanding(); }
+    if (currentUser) { showApp(); loadInsumos(); loadProductosResumen(); loadVentas(); loadReposiciones(); loadGastos(); loadHorneadas(); loadVisitasLanding(); }
     else showLogin();
   });
 
@@ -498,6 +539,7 @@ async function loadProductosResumen(){
   renderProductosResumen();
   poblarSelectProductosVenta();
   poblarSelectProductoPadre();
+  poblarSelectTortaHorneada();
   if (productoSeleccionadoId) renderRecetaResumen();
   renderResumen();
 }
@@ -516,12 +558,21 @@ function poblarSelectProductoPadre(){
 
 function renderProductosResumen(){
   const tbody = document.getElementById('listaProductos');
+  const hayTortas = productosResumen.some(p => p.tipo === 'Torta entera');
+  document.getElementById('panelHorneada').style.display = hayTortas ? 'block' : 'none';
+
   tbody.innerHTML = productosResumen.length ? productosResumen.map(p => {
     const margenNeg = Number(p.margen) < 0;
     const esPorcionDerivada = !!p.producto_padre_id;
-    const nombreCelda = esPorcionDerivada
+    let nombreCelda = esPorcionDerivada
       ? `${p.nombre}<br><span class="tag">de: ${p.producto_padre_nombre} ÷ ${p.porciones_por_torta}</span>`
       : p.nombre;
+    // Stock de porciones ya cortadas y disponibles para vender (solo aplica
+    // a porciones derivadas de una torta — ver horneadas).
+    if (esPorcionDerivada) {
+      const stock = Number(p.stock_porciones);
+      nombreCelda += `<br><span class="tag${stock <= 0 ? ' low' : ''}">Disponibles: ${stock}</span>`;
+    }
     return `<tr>
       <td>${nombreCelda}</td>
       <td><span class="tag">${p.tipo}</span></td>
@@ -530,9 +581,10 @@ function renderProductosResumen(){
       <td class="num${margenNeg ? ' neg' : ''}">${fmt(p.margen)}</td>
       <td>${esPorcionDerivada ? '' : `<button class="ghost" onclick="abrirReceta('${p.producto_id}')">Receta</button>`}</td>
       <td><button class="ghost" onclick="editarProducto('${p.producto_id}')">Editar</button></td>
+      <td><button class="ghost" onclick="duplicarProducto('${p.producto_id}')">Duplicar</button></td>
       <td><button class="ghost" onclick="borrarProducto('${p.producto_id}')">Borrar</button></td>
     </tr>`;
-  }).join('') : `<tr><td colspan="8" class="empty">Sin productos cargados todavía.</td></tr>`;
+  }).join('') : `<tr><td colspan="9" class="empty">Sin productos cargados todavía.</td></tr>`;
 }
 
 // Los campos de "torta madre" solo tienen sentido para tipo 'Porción'.
@@ -545,31 +597,93 @@ function actualizarCamposPorcion(){
 document.getElementById('selectTipoProducto').addEventListener('change', actualizarCamposPorcion);
 actualizarCamposPorcion();
 
+// Si hay un id acá, el form de arriba está editando ese producto en vez de
+// crear uno nuevo — ver editarProducto()/cancelarEdicionProducto().
+let productoEditandoId = null;
+
 document.getElementById('formProducto').addEventListener('submit', async e => {
   e.preventDefault();
   const f = new FormData(e.target);
   const productoPadreId = f.get('producto_padre_id') || null;
-  const { error } = await supabaseClient.from('productos').insert({
+  const payload = {
     nombre: f.get('nombre'),
     tipo: f.get('tipo'),
     precio_venta: Number(f.get('precio_venta')),
     producto_padre_id: productoPadreId,
     porciones_por_torta: productoPadreId ? Number(f.get('porciones_por_torta')) : null
-  });
+  };
+  const { error } = productoEditandoId
+    ? await supabaseClient.from('productos').update(payload).eq('id', productoEditandoId)
+    : await supabaseClient.from('productos').insert(payload);
   if (error) { alert('No se pudo guardar el producto: ' + error.message); return; }
   await loadProductosResumen();
-  e.target.reset();
-  actualizarCamposPorcion();
+  cancelarEdicionProducto();
 });
 
-window.editarProducto = async id => {
+// Carga el producto en el form de arriba para editarlo completo (nombre,
+// tipo, precio, y el vínculo con la torta madre si lo tiene) — antes solo se
+// podía cambiar nombre/precio por prompt(), y el tipo no se podía tocar.
+window.editarProducto = id => {
   const p = productosResumen.find(x => x.producto_id === id);
   if (!p) return;
-  const nombre = prompt('Nuevo nombre de "' + p.nombre + '":', p.nombre);
+  productoEditandoId = id;
+  const form = document.getElementById('formProducto');
+  form.nombre.value = p.nombre;
+  form.tipo.value = p.tipo;
+  form.precio_venta.value = p.precio_venta;
+  actualizarCamposPorcion();
+  form.producto_padre_id.value = p.producto_padre_id || '';
+  form.porciones_por_torta.value = p.porciones_por_torta || '';
+  document.getElementById('tituloFormProducto').textContent = 'Editar producto';
+  document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
+  document.getElementById('btnCancelarEdicionProducto').style.display = '';
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+function cancelarEdicionProducto(){
+  productoEditandoId = null;
+  document.getElementById('formProducto').reset();
+  actualizarCamposPorcion();
+  document.getElementById('tituloFormProducto').textContent = 'Agregar producto';
+  document.getElementById('btnGuardarProducto').textContent = 'Guardar';
+  document.getElementById('btnCancelarEdicionProducto').style.display = 'none';
+}
+document.getElementById('btnCancelarEdicionProducto').addEventListener('click', cancelarEdicionProducto);
+
+// Copia un producto (tipo, precio, y si tiene, el vínculo con su torta
+// madre) junto con toda su receta propia — así una torta que ya armaste no
+// hay que volver a cargarla insumo por insumo cada vez que necesitás una
+// variante o repetir el registro.
+window.duplicarProducto = async id => {
+  const p = productosResumen.find(x => x.producto_id === id);
+  if (!p) return;
+  const nombre = prompt('Nombre del producto duplicado:', p.nombre + ' (copia)');
   if (nombre === null) return;
-  const precio = prompt('Nuevo precio de venta de "' + nombre + '":', p.precio_venta);
-  if (precio === null) return;
-  await supabaseClient.from('productos').update({ nombre, precio_venta: Number(precio) }).eq('id', id);
+
+  const { data: nuevo, error } = await supabaseClient.from('productos').insert({
+    nombre,
+    tipo: p.tipo,
+    precio_venta: Number(p.precio_venta),
+    producto_padre_id: p.producto_padre_id,
+    porciones_por_torta: p.porciones_por_torta
+  }).select().single();
+  if (error) { alert('No se pudo duplicar: ' + error.message); return; }
+
+  const { data: recetaOriginal, error: errReceta } = await supabaseClient
+    .from('receta_items')
+    .select('insumo_id, cantidad_necesaria')
+    .eq('producto_id', id);
+  if (errReceta) { alert('El producto se duplicó, pero no se pudo copiar la receta: ' + errReceta.message); }
+  else if (recetaOriginal?.length) {
+    const copiaReceta = recetaOriginal.map(r => ({
+      producto_id: nuevo.id,
+      insumo_id: r.insumo_id,
+      cantidad_necesaria: r.cantidad_necesaria
+    }));
+    const { error: errCopia } = await supabaseClient.from('receta_items').insert(copiaReceta);
+    if (errCopia) alert('El producto se duplicó, pero no se pudo copiar la receta: ' + errCopia.message);
+  }
+
   await loadProductosResumen();
 };
 
@@ -577,6 +691,7 @@ window.borrarProducto = async id => {
   const { error } = await supabaseClient.from('productos').delete().eq('id', id);
   if (error) { alert('No se pudo borrar: ' + error.message + '\n(Puede tener ventas registradas)'); return; }
   if (productoSeleccionadoId === id) cerrarReceta();
+  if (productoEditandoId === id) cancelarEdicionProducto();
   await loadProductosResumen();
 };
 
@@ -659,6 +774,60 @@ window.borrarRecetaItem = async id => {
   await loadProductosResumen();
 };
 
+// ===== Horneadas (producción de tortas enteras) =====
+// Hornear una torta es un evento de producción, no de venta: el trigger de
+// la base descuenta los insumos de su receta y suma porciones_por_torta al
+// stock de cada porción que la tenga como padre — acá solo insertamos y
+// refrescamos productos/insumos.
+function poblarSelectTortaHorneada(){
+  const select = document.getElementById('selectTortaHorneada');
+  const actual = select.value;
+  const tortas = productosResumen.filter(p => p.tipo === 'Torta entera');
+  select.innerHTML = tortas.length
+    ? tortas.map(p => `<option value="${p.producto_id}">${p.nombre}</option>`).join('')
+    : '<option value="">Cargá una torta entera primero</option>';
+  if (actual && tortas.some(p => p.producto_id === actual)) select.value = actual;
+}
+
+async function loadHorneadas(){
+  const { data, error } = await supabaseClient
+    .from('horneadas')
+    .select('*, productos(nombre)')
+    .order('fecha', { ascending: false });
+  if (error) { console.error(error); return; }
+  horneadas = data || [];
+  renderHorneadas();
+}
+
+function renderHorneadas(){
+  const tbody = document.getElementById('listaHorneadas');
+  tbody.innerHTML = horneadas.length ? horneadas.slice(0, 10).map(h => `<tr>
+      <td>${h.fecha}</td>
+      <td>${h.productos?.nombre ?? '—'}</td>
+      <td class="num">${h.cantidad}</td>
+    </tr>`).join('') : `<tr><td colspan="3" class="empty">Todavía no registraste ninguna horneada.</td></tr>`;
+}
+
+document.getElementById('formHorneada').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const productoId = f.get('producto_id');
+  if (!productoId) return;
+  const { error } = await supabaseClient.from('horneadas').insert({
+    fecha: f.get('fecha'),
+    producto_id: productoId,
+    cantidad: Number(f.get('cantidad'))
+  });
+  if (error) { alert('No se pudo registrar la horneada: ' + error.message); return; }
+  await loadHorneadas();
+  await loadProductosResumen();
+  await loadInsumos();
+  e.target.reset();
+  e.target.querySelector('[name=cantidad]').value = 1;
+  e.target.querySelector('[name=fecha]').value = todayStr();
+});
+document.getElementById('formHorneada').querySelector('[name=fecha]').value = todayStr();
+
 // ===== Ventas =====
 // El trigger de la base descuenta el stock según la receta del producto — acá
 // solo hace falta insertar y refrescar insumos para que se vea el nuevo stock.
@@ -666,15 +835,30 @@ function poblarSelectProductosVenta(){
   const select = document.getElementById('selectProductoVenta');
   const actual = select.value;
   select.innerHTML = productosResumen.length
-    ? productosResumen.map(p => `<option value="${p.producto_id}" data-precio="${p.precio_venta}">${p.nombre}</option>`).join('')
+    ? productosResumen.map(p => `<option value="${p.producto_id}" data-precio="${p.precio_venta}" data-derivada="${!!p.producto_padre_id}" data-stock="${p.stock_porciones}">${p.nombre}</option>`).join('')
     : '<option value="">Cargá un producto primero</option>';
   if (actual && productosResumen.some(p => p.producto_id === actual)) select.value = actual;
+  mostrarStockPorcionVenta();
+}
+
+// Si el producto elegido es una porción derivada de una torta, muestra
+// cuántas quedan disponibles (la venta la rechaza la base si te pasás).
+function mostrarStockPorcionVenta(){
+  const opt = document.getElementById('selectProductoVenta').selectedOptions[0];
+  const nota = document.getElementById('stockPorcionVenta');
+  if (opt?.dataset.derivada === 'true') {
+    nota.style.display = '';
+    nota.textContent = `Porciones disponibles de esta torta: ${opt.dataset.stock}`;
+  } else {
+    nota.style.display = 'none';
+  }
 }
 
 document.getElementById('selectProductoVenta').addEventListener('change', e => {
   const opt = e.target.selectedOptions[0];
   const precio = opt?.dataset.precio;
   if (precio) document.getElementById('formVenta').querySelector('[name=precio_unitario]').value = precio;
+  mostrarStockPorcionVenta();
 });
 
 async function loadVentas(){
@@ -716,7 +900,7 @@ document.getElementById('formVenta').addEventListener('submit', async e => {
   await loadInsumos();
   e.target.reset();
   e.target.querySelector('[name=fecha]').value = todayStr();
-  poblarSelectProductosVenta();
+  await loadProductosResumen();
 });
 
 window.borrarVenta = async id => {
@@ -724,6 +908,7 @@ window.borrarVenta = async id => {
   if (error) { alert('No se pudo borrar la venta: ' + error.message); return; }
   await loadVentas();
   await loadInsumos();
+  await loadProductosResumen();
 };
 
 document.getElementById('formVenta').querySelector('[name=fecha]').value = todayStr();
