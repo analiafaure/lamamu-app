@@ -214,7 +214,7 @@
         </form>
         <div class="table-scroll">
         <table>
-          <thead><tr><th>Fecha</th><th>Torta</th><th class="num">Cantidad</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Torta</th><th class="num">Cantidad</th><th></th></tr></thead>
           <tbody id="listaHorneadas"></tbody>
         </table>
         </div>
@@ -805,8 +805,22 @@ function renderHorneadas(){
       <td>${h.fecha}</td>
       <td>${h.productos?.nombre ?? '—'}</td>
       <td class="num">${h.cantidad}</td>
-    </tr>`).join('') : `<tr><td colspan="3" class="empty">Todavía no registraste ninguna horneada.</td></tr>`;
+      <td><button class="ghost" onclick="borrarHorneada('${h.id}')">Borrar</button></td>
+    </tr>`).join('') : `<tr><td colspan="4" class="empty">Todavía no registraste ninguna horneada.</td></tr>`;
 }
+
+// Deshace una horneada cargada por error: el trigger devuelve los insumos
+// descontados y resta las porciones que había sumado. Si ya se vendieron
+// porciones de esa horneada, el trigger rechaza el borrado (quedaría el
+// stock en negativo) — hay que corregir esas ventas primero.
+window.borrarHorneada = async id => {
+  if (!confirm('¿Borrar esta horneada? Se devuelven los insumos descontados y se resta el stock de porciones que generó.')) return;
+  const { error } = await supabaseClient.from('horneadas').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar la horneada: ' + error.message); return; }
+  await loadHorneadas();
+  await loadProductosResumen();
+  await loadInsumos();
+};
 
 document.getElementById('formHorneada').addEventListener('submit', async e => {
   e.preventDefault();
