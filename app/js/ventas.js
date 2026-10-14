@@ -27,8 +27,29 @@ function mostrarStockPorcionVenta(){
 document.getElementById('selectProductoVenta').addEventListener('change', e => {
   const opt = e.target.selectedOptions[0];
   const precio = opt?.dataset.precio;
-  if (precio) document.getElementById('formVenta').querySelector('[name=precio_unitario]').value = precio;
+  if (precio && !document.getElementById('checkEsRegalo').checked) {
+    document.getElementById('precioUnitarioVenta').value = precio;
+  }
   mostrarStockPorcionVenta();
+});
+
+// Si es regalo: no se cobra, así que el precio queda fijo en 0 (hay un check
+// en la base que lo obliga) y en vez de ingreso, el costo de receta de lo
+// regalado se registra solo como un gasto ("Regalos/mermas") — para que no
+// desaparezca de los números.
+document.getElementById('checkEsRegalo').addEventListener('change', e => {
+  const precioInput = document.getElementById('precioUnitarioVenta');
+  const nota = document.getElementById('notaRegalo');
+  if (e.target.checked) {
+    precioInput.value = 0;
+    precioInput.disabled = true;
+    nota.style.display = '';
+  } else {
+    precioInput.disabled = false;
+    nota.style.display = 'none';
+    const opt = document.getElementById('selectProductoVenta').selectedOptions[0];
+    if (opt?.dataset.precio) precioInput.value = opt.dataset.precio;
+  }
 });
 
 async function loadVentas(){
@@ -46,7 +67,7 @@ function renderVentas(){
   const tbody = document.getElementById('listaVentas');
   tbody.innerHTML = ventas.length ? ventas.map(v => `<tr>
       <td>${v.fecha}</td>
-      <td>${v.productos?.nombre ?? '—'}</td>
+      <td>${v.productos?.nombre ?? '—'} ${v.es_regalo ? '<span class="tag">regalo</span>' : ''}</td>
       <td class="num">${v.cantidad}</td>
       <td class="num">${fmt(v.precio_unitario)}</td>
       <td class="num">${fmt(v.cantidad * v.precio_unitario)}</td>
@@ -59,17 +80,25 @@ document.getElementById('formVenta').addEventListener('submit', async e => {
   const f = new FormData(e.target);
   const productoId = f.get('producto_id');
   if (!productoId) return;
+  const esRegalo = document.getElementById('checkEsRegalo').checked;
   const { error } = await supabaseClient.from('ventas').insert({
     fecha: f.get('fecha'),
     producto_id: productoId,
     cantidad: Number(f.get('cantidad')),
-    precio_unitario: Number(f.get('precio_unitario'))
+    // El input queda disabled cuando es regalo, así que FormData no lo trae
+    // (los campos disabled no se serializan) — se fuerza a 0 acá.
+    precio_unitario: esRegalo ? 0 : Number(f.get('precio_unitario')),
+    es_regalo: esRegalo
   });
   if (error) { alert('No se pudo registrar la venta: ' + error.message); return; }
   await loadVentas();
   await loadInsumos();
+  await loadGastos(); // si fue regalo, el trigger ya generó el gasto correspondiente
   e.target.reset();
   e.target.querySelector('[name=fecha]').value = todayStr();
+  // reset() desmarca el checkbox pero no reactiva el campo de precio (el
+  // disabled quedó puesto a mano) — se resincroniza disparando el handler.
+  document.getElementById('checkEsRegalo').dispatchEvent(new Event('change'));
   await loadProductosResumen();
 });
 
@@ -79,6 +108,7 @@ window.borrarVenta = async id => {
   await loadVentas();
   await loadInsumos();
   await loadProductosResumen();
+  await loadGastos(); // si era un regalo, el trigger borró el gasto que había generado
 };
 
 document.getElementById('formVenta').querySelector('[name=fecha]').value = todayStr();

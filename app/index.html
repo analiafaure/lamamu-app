@@ -151,18 +151,20 @@
 
     <section class="section" id="tab-insumos">
       <div class="panel">
-        <h2>Agregar insumo</h2>
+        <h2 id="tituloFormInsumo">Agregar insumo</h2>
         <form class="inline" id="formInsumo">
           <div class="field grow"><label>Nombre</label><input type="text" name="nombre" placeholder="Ej: Harina 000" required></div>
-          <div class="field"><label>Cantidad inicial</label><input type="number" name="cantidad" id="cantidadInsumo" min="0" step="0.01" value="0" required></div>
+          <div class="field"><label>Cantidad</label><input type="number" name="cantidad" id="cantidadInsumo" min="0" step="0.01" value="0" required></div>
           <div class="field"><label>Unidad</label>
             <select name="unidad"><option>kg</option><option>g</option><option>l</option><option>ml</option><option>unidades</option><option>horas</option></select>
           </div>
           <div class="field"><label>Costo total pagado ($)</label><input type="number" name="costoTotal" id="costoTotalInsumo" min="0" step="0.01" required></div>
           <div class="field"><label>Stock mínimo</label><input type="number" name="minimo" min="0" step="0.01" value="0"></div>
-          <button type="submit" class="primary">Guardar</button>
+          <button type="submit" class="primary" id="btnGuardarInsumo">Guardar</button>
+          <button type="button" class="ghost" id="btnCancelarEdicionInsumo" style="display:none;">Cancelar</button>
         </form>
         <p class="preview-costo" id="previewCostoInsumo"></p>
+        <p id="notaEdicionInsumo" style="display:none; font-size:13px; color:var(--ink-soft); margin:-10px 0 16px;">Estás editando un insumo existente: si tocás cantidad o costo total, se guardan tal cual (a diferencia de "Reponer stock", esto no genera un gasto — para eso usá la pestaña Reposición).</p>
       </div>
 
       <div class="panel">
@@ -184,7 +186,14 @@
           <div class="field"><label>Tipo</label>
             <select name="tipo" id="selectTipoProducto"><option>Porción</option><option>Torta entera</option></select>
           </div>
-          <div class="field"><label>Precio de venta ($)</label><input type="number" name="precio_venta" min="0" step="0.01" required></div>
+          <div class="field"><label>Precio de venta ($)</label><input type="number" name="precio_venta" id="inputPrecioVenta" min="0" step="0.01" required></div>
+          <div class="field" id="campoPrecioSugerido" style="display:none;">
+            <label>Margen deseado (%)</label>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="number" id="inputMargenDeseado" min="0" step="1" value="100" style="max-width:70px;">
+              <button type="button" class="ghost" id="btnUsarPrecioSugerido">Usar $<span id="valorPrecioSugerido">0</span></button>
+            </div>
+          </div>
           <div class="field grow" id="campoProductoPadre" style="display:none;">
             <label>¿Es porción de alguna torta ya cargada?</label>
             <select name="producto_padre_id" id="selectProductoPadre">
@@ -256,10 +265,17 @@
             <select name="producto_id" id="selectProductoVenta" required></select>
           </div>
           <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="1" value="1" required></div>
-          <div class="field"><label>Precio unitario ($)</label><input type="number" name="precio_unitario" min="0" step="0.01" required></div>
+          <div class="field"><label>Precio unitario ($)</label><input type="number" name="precio_unitario" id="precioUnitarioVenta" min="0" step="0.01" required></div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13.5px; color:var(--ink); padding:8px 0;">
+              <input type="checkbox" id="checkEsRegalo" style="width:auto;"> Es regalo (no se cobra)
+            </label>
+          </div>
           <button type="submit" class="primary">Agregar venta</button>
         </form>
         <p id="stockPorcionVenta" style="display:none; font-size:13px; color:var(--ink-soft); margin:-6px 0 0;"></p>
+        <p id="notaRegalo" style="display:none; font-size:13px; color:var(--ink-soft); margin:-6px 0 0;">Se va a registrar el costo de esto como un gasto ("Regalos/mermas"), para que no desaparezca de los números.</p>
       </div>
 
       <div class="panel">

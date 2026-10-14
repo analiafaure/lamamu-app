@@ -25,13 +25,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `supabase-schema-v4-visitas.sql` (repo root) — additive migration: `visitas_landing` table (one row per landing page load, no personal data) with RLS allowing public insert + public read of the count, backing the landing's visit counter. **Needs to be run manually in the Supabase SQL editor.**
 - `supabase-schema-v5-horneadas.sql` (repo root) — additive migration: `productos.stock_porciones` + `horneadas` table (production event, see Data model below), extends `vw_producto_costos` with `stock_porciones`. **Needs to be run manually in the Supabase SQL editor.**
 - `supabase-schema-v6-borrar-horneadas.sql` (repo root) — additive migration: adds the delete-reversal trigger for `horneadas` (see Triggers below), so a horneada loaded by mistake can be deleted from the UI. **Needs to be run manually in the Supabase SQL editor.**
+- `supabase-schema-v7-regalos.sql` (repo root) — additive migration: adds `ventas.es_regalo`/`ventas.gasto_id` + a check constraint (`es_regalo` ⇒ `precio_unitario = 0`), the reusable `fn_costo_receta_producto(uuid)` function, and the two regalo-as-gasto triggers (see Data model / Triggers below). **Needs to be run manually in the Supabase SQL editor.**
 
 ## Data model (already applied in Supabase)
 
 - `insumos`: id, user_id, nombre, unidad (kg/g/l/ml/unidades), cantidad (stock actual), costo_unitario, stock_minimo.
 - `productos`: id, user_id, nombre (ej. "Porción red velvet"), tipo ('Porción' | 'Torta entera'), precio_venta, `producto_padre_id` (self-FK a productos, nullable, on delete set null), `porciones_por_torta` (numeric, nullable), `stock_porciones` (numeric, default 0 — v5). Los tres últimos son para una "Porción" que deriva su costo de una "Torta entera" ya cargada — ver más abajo.
 - `receta_items`: bridge productos↔insumos. id, user_id, producto_id, insumo_id, cantidad_necesaria (cuánto de ese insumo lleva 1 unidad del producto). Unique (producto_id, insumo_id).
-- `ventas`: id, user_id, producto_id, fecha, cantidad, precio_unitario (snapshot al momento de la venta — puede diferir del precio_venta actual del producto).
+- `ventas`: id, user_id, producto_id, fecha, cantidad, precio_unitario (snapshot al momento de la venta — puede diferir del precio_venta actual del producto), `es_regalo` (boolean, default false — v7), `gasto_id` (nullable FK a gastos, se completa solo vía trigger si `es_regalo` — v7). Check constraint: si `es_regalo` es true, `precio_unitario` tiene que ser 0.
 - `gastos`: id, user_id, fecha, descripcion, categoria, monto.
 - `reposiciones`: registro de compra de insumos. id, user_id, insumo_id, fecha, cantidad, costo_unitario, monto_total (columna generada = cantidad × costo_unitario), gasto_id (se completa solo, vía trigger).
 - `horneadas` (v5): registro de producción de una torta entera — id, user_id, producto_id (la torta), fecha, cantidad (cuántas tortas enteras de esa receta se hicieron). Es un evento de producción, no de venta: no tiene precio ni aparece en Ventas/Resumen de ingresos.
@@ -48,9 +49,26 @@ Una "Porción" puede enlazarse a una "Torta entera" ya cargada (con receta propi
 - El enlace (`producto_padre_id`/`porciones_por_torta`) solo se puede definir al **crear** el producto desde el formulario — no hay edición posterior en la UI. Para cambiarlo hay que borrar y volver a cargar el producto (o usar "Duplicar", ver abajo, y ajustar desde la copia).
 - Si se borra la torta madre, `producto_padre_id` de sus porciones vuelve a `null` (on delete set null) y esas porciones pasan a calcular su costo desde su propia receta (vacía → costo 0, margen = precio_venta completo) — no rompe nada, pero el margen mostrado cambia de golpe. El `stock_porciones` que ya tenían acumulado queda como estaba (no se resetea).
 
+### Regalos registrados como gasto (v7)
+
+Una venta se puede marcar `es_regalo` (checkbox "Es regalo (no se cobra)" en Ventas) para los casos en que una torta/porción no se vende sino que se regala. Sigue descontando stock de insumos/porciones igual que cualquier venta (mismos triggers de siempre) pero no genera ingreso (`precio_unitario` queda forzado a 0) — en su lugar, `trg_venta_registra_regalo_como_gasto` crea automáticamente un gasto por el costo de receta del producto × cantidad (categoría "Regalos/mermas"), usando `fn_costo_receta_producto()` (misma lógica de costo que `vw_producto_costos`, extraída a función para reusarla). El gasto queda vinculado vía `ventas.gasto_id`: no se puede borrar suelto desde Gastos (aparece con tag "regalo", sin botón de borrar, igual que los gastos de reposición) — hay que borrar la venta de origen, lo que dispara `trg_venta_borra_gasto_regalo` y borra el gasto con ella. Antes de v7 un regalo no quedaba reflejado en ningún lado como pérdida: el costo de lo regalado desaparecía sin afectar el resumen financiero.
+
+### Precio de venta sugerido
+
+Al editar un producto (no al crearlo — recién al editar ya hay un `costo_receta` real calculado), aparece un campo "Precio sugerido" con un % de margen deseado (default 100%, en `app/js/productos.js`'s `actualizarPrecioSugerido`/`btnUsarPrecioSugerido`): `sugerido = costo_receta × (1 + margen/100)`. Es solo una sugerencia que rellena el input de precio_venta al tocar "Usar $X" — el usuario puede seguir editándolo a mano antes de guardar, nunca se guarda solo.
+
 ### Duplicar un producto
 
 Cada fila de Productos tiene un botón "Duplicar": copia el producto (nombre editable vía prompt, tipo, precio_venta, y el vínculo `producto_padre_id`/`porciones_por_torta` si lo tiene) junto con toda su `receta_items` propia. Para no tener que recargar insumo por insumo una torta que ya existe cuando se necesita una variante (otro tamaño, otro sabor parecido). El duplicado arranca con `stock_porciones` en 0 — es un producto nuevo, no hereda el stock del original.
+
+### Editar/borrar insumos, y por qué dar de alta uno nuevo genera un gasto
+
+Insumos tiene el mismo patrón de alta/edición dual que Productos (`insumoEditandoId` en `app/js/insumos.js`): "Editar" carga nombre, unidad, stock_minimo y cantidad/costo en el form de arriba para corregirlos directo, sin `prompt()`. Dos detalles no obvios:
+
+- **Editar es un UPDATE directo, no pasa por `reposiciones`** — es una corrección (ej. arreglar un stock_minimo mal puesto), no una compra nueva, así que no genera gasto.
+- **Dar de alta un insumo nuevo SÍ genera un gasto**, porque por dentro encadena en una `reposiciones.insert()` (la cantidad/costo inicial que se carga) reusando el trigger ya existente (`trg_reposicion_actualiza_stock_y_gasto`) en vez de duplicar esa lógica. Antes el alta insertaba directo en `insumos` y ese gasto inicial no quedaba registrado en ningún lado — era un agujero real en los números (ej. al armar una receta nueva que necesita un insumo que todavía no existía).
+- Se quitó el comportamiento anterior de "si cargás un insumo con el mismo nombre que uno existente, lo actualiza en vez de crear otro" (merge implícito por nombre) — "Agregar insumo" ahora siempre crea una fila nueva; una corrección a un insumo existente tiene que hacerse con el botón "Editar".
+- Borrar insumos (`borrarInsumo`) ya existía desde antes de esta ronda de cambios — lo rechaza la base (FK) si el insumo está usado en alguna receta.
 
 ## Triggers (la lógica de negocio vive en la base, no en el frontend)
 
@@ -60,6 +78,8 @@ Cada fila de Productos tiene un botón "Duplicar": copia el producto (nombre edi
 - `trg_horneada_efectos` (AFTER INSERT ON horneadas, v5): descuenta `insumos.cantidad` según la receta de la torta horneada × cantidad (igual que una venta), y suma `porciones_por_torta × cantidad` a `stock_porciones` de cada producto 'Porción' que tenga a esa torta como `producto_padre_id`.
 - `trg_horneada_revierte_efectos` (AFTER DELETE ON horneadas, v6): al borrar una horneada (hay botón en la UI, a diferencia de `reposiciones`), devuelve los insumos descontados y resta las porciones que había sumado — pero **rechaza el borrado** (raise exception) si ya se vendieron porciones de esa horneada y restar dejaría `stock_porciones` en negativo; hay que borrar esas ventas primero.
 - `trg_venta_descuenta_stock_porciones` / `trg_venta_restaura_stock_porciones` (v5, AFTER INSERT/DELETE ON ventas): si el producto vendido tiene `producto_padre_id` (es una porción derivada), descuenta/devuelve `stock_porciones` — el insert **rechaza la venta** (raise exception, llega como `error` a Supabase-js) si no hay suficientes porciones disponibles.
+- `trg_venta_registra_regalo_como_gasto` (AFTER INSERT ON ventas, v7): si `new.es_regalo`, crea un gasto por `fn_costo_receta_producto(producto_id) × cantidad` (categoría "Regalos/mermas") y guarda su id en `ventas.gasto_id`.
+- `trg_venta_borra_gasto_regalo` (AFTER DELETE ON ventas, v7): si la venta borrada tenía `gasto_id`, borra ese gasto también (evita gastos fantasma sin la venta que los originó).
 - Como el cálculo de stock vive en triggers, las pantallas de Ventas/Reposiciones/Horneadas solo necesitan hacer INSERT y volver a pedir los datos — nada de aritmética de stock en el cliente.
 
 ## Identidad visual (mantener consistencia entre app y landing)
@@ -84,4 +104,5 @@ Cada fila de Productos tiene un botón "Duplicar": copia el producto (nombre edi
 6. ✅ (estructura) **Landing page**: creada (`landing/index.html`) — hero, grillas de Porciones/Tortas enteras, "¿Cómo pedís?", botón flotante de WhatsApp. Cada tarjeta de producto arma un link `wa.me` con el mensaje precargado. **Falta**: reemplazar el número de WhatsApp, los productos/precios/descripciones y las fotos de ejemplo por los datos reales (todo editable en el bloque `<script>` de configuración al principio del archivo).
 7. ✅ (repo listo) **Deploy**: repo reorganizado en `app/` y `landing/` para poder crear dos sitios independientes en Netlify/Vercel apuntando al mismo repo de GitHub (`analiafaure/lamamu-app`), cada uno con su propio "base/root directory". La creación de los sitios en sí se hace a mano desde el dashboard de Netlify/Vercel (no se puede automatizar desde acá). **Pendiente**: crear los dos sitios (ver instrucciones que se le pasaron a la dueña del negocio) y, una vez que estén online, apuntar Site URL / Redirect URLs de Supabase Auth (Authentication → URL Configuration) al dominio de producción de `app` — si no, el magic link de login redirige a localhost y no funciona en producción.
 8. ✅ **Horneadas + stock de porciones + duplicar producto**: "Registrar horneada" en Productos y recetas (torta + cantidad) descuenta insumos y suma stock a las porciones derivadas; vender una porción ahora descuenta ese stock y se rechaza si no alcanza; botón "Duplicar" copia un producto + su receta; una horneada se puede borrar (devuelve insumos y resta porciones, rechaza el borrado si ya se vendieron). Ya corridos en Supabase: v5 y v6.
-9. (Opcional, más adelante) Promedio ponderado de costo en vez de "último precio de compra", si el negocio lo llega a necesitar.
+9. ✅ **Regalos como gasto + precio sugerido + insumos editables**: ventas marcables como regalo (no generan ingreso, sí un gasto automático por el costo de receta — ver Data model/Triggers); precio de venta sugerido al editar un producto (costo_receta + % de margen, default 100%); insumos con edición completa (nombre/unidad/stock_minimo/cantidad/costo) en vez de `prompt()`, y el alta de un insumo nuevo ahora sí genera gasto (encadena en `reposiciones`). **Pendiente: correr `supabase-schema-v7-regalos.sql` manualmente en el SQL editor.**
+10. (Opcional, más adelante) Promedio ponderado de costo en vez de "último precio de compra", si el negocio lo llega a necesitar.

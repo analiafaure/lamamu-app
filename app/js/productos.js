@@ -10,6 +10,7 @@ async function loadProductosResumen(){
   poblarSelectProductoPadre();
   poblarSelectTortaHorneada();
   if (productoSeleccionadoId) renderRecetaResumen();
+  if (productoEditandoId) actualizarPrecioSugerido();
   renderResumen();
 }
 
@@ -106,8 +107,36 @@ window.editarProducto = id => {
   document.getElementById('tituloFormProducto').textContent = 'Editar producto';
   document.getElementById('btnGuardarProducto').textContent = 'Guardar cambios';
   document.getElementById('btnCancelarEdicionProducto').style.display = '';
+  // El precio sugerido solo tiene sentido editando (recién ahí ya hay un
+  // costo_receta real calculado — al crear el producto todavía no tiene
+  // receta, costo_receta sería 0).
+  document.getElementById('campoPrecioSugerido').style.display = '';
+  actualizarPrecioSugerido();
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
+
+// Precio sugerido = costo de receta + el % de margen que se quiera aplicar
+// (por defecto 100%, osea duplicar el costo) — solo rellena el campo del
+// form, no guarda solo: el usuario decide si lo deja así o lo ajusta antes
+// de confirmar "Guardar cambios".
+function actualizarPrecioSugerido(){
+  if (!productoEditandoId) return;
+  const p = productosResumen.find(x => x.producto_id === productoEditandoId);
+  if (!p) return;
+  const margenPct = Number(document.getElementById('inputMargenDeseado').value) || 0;
+  const sugerido = Number(p.costo_receta) * (1 + margenPct / 100);
+  document.getElementById('valorPrecioSugerido').textContent = sugerido.toFixed(0);
+}
+document.getElementById('inputMargenDeseado').addEventListener('input', actualizarPrecioSugerido);
+
+document.getElementById('btnUsarPrecioSugerido').addEventListener('click', () => {
+  if (!productoEditandoId) return;
+  const p = productosResumen.find(x => x.producto_id === productoEditandoId);
+  if (!p) return;
+  const margenPct = Number(document.getElementById('inputMargenDeseado').value) || 0;
+  const sugerido = Number(p.costo_receta) * (1 + margenPct / 100);
+  document.getElementById('inputPrecioVenta').value = Math.round(sugerido);
+});
 
 function cancelarEdicionProducto(){
   productoEditandoId = null;
@@ -116,6 +145,7 @@ function cancelarEdicionProducto(){
   document.getElementById('tituloFormProducto').textContent = 'Agregar producto';
   document.getElementById('btnGuardarProducto').textContent = 'Guardar';
   document.getElementById('btnCancelarEdicionProducto').style.display = 'none';
+  document.getElementById('campoPrecioSugerido').style.display = 'none';
 }
 document.getElementById('btnCancelarEdicionProducto').addEventListener('click', cancelarEdicionProducto);
 
