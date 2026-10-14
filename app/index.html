@@ -72,7 +72,7 @@
   .login-msg.error{ color:var(--danger); }
   .config-warning{ background:#F6DCD9; color:var(--danger); padding:14px 18px; font-size:13.5px; border-left:4px solid var(--danger); margin:20px; text-align:center; }
 
-  @media (max-width:640px){ main{ padding:18px 14px 50px; } header.top{ padding:18px 16px 14px; } form.inline{ flex-direction:column; align-items:stretch; } .field{ min-width:0; } }
+  @media (max-width:640px){ main{ padding:18px 14px 50px; } header.top{ padding:18px 16px 14px; } form.inline{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; } .field, .field.grow{ min-width:0; } .field input, .field select{ width:100%; } }
 </style>
 </head>
 <body>
