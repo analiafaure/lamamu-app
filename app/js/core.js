@@ -17,7 +17,6 @@ const esteMes = fecha => {
 let supabaseClient, currentUser = null;
 let insumos = [];
 let productosResumen = [];
-let productoSeleccionadoId = null;
 let ventas = [];
 let reposiciones = [];
 let gastos = [];
